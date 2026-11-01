@@ -1,4 +1,9 @@
-import { fireEvent, render, screen } from '@testing-library/react-native';
+import {
+  fireEvent,
+  render,
+  screen,
+  waitFor,
+} from '@testing-library/react-native';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Today from '../app/(tabs)/index';
@@ -15,7 +20,10 @@ jest.mock('@/auth/session', () => ({
 
 function renderToday() {
   const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
+    defaultOptions: {
+      queries: { retry: false, gcTime: Infinity },
+      mutations: { gcTime: Infinity },
+    },
   });
   return render(
     <QueryClientProvider client={client}>
@@ -67,6 +75,8 @@ test('marks rest through the API', async () => {
   await fireEvent.press(await screen.findByText('Odpoczynek'));
 
   expect(mockApi.post).toHaveBeenCalledWith('/entries/rest');
+  // let the mutation finish and the refetch after it settle
+  await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(2));
 });
 
 test('rest and sick buttons are hidden once trained today', async () => {
