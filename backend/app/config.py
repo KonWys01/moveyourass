@@ -23,6 +23,7 @@ class Settings(BaseSettings):
     reminder_hour: int = 20
     reminder_window_hours: int = 2
     scheduler_enabled: bool = True
+    contact_email: str = ''
 
 
 @lru_cache
