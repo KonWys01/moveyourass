@@ -15,7 +15,9 @@ async def session() -> AsyncIterator[AsyncSession]:
     async with engine.connect() as conn:
         trans = await conn.begin()
         async with AsyncSession(
-            bind=conn, join_transaction_mode='create_savepoint'
+            bind=conn,
+            join_transaction_mode='create_savepoint',
+            expire_on_commit=False,
         ) as s:
             yield s
         await trans.rollback()
