@@ -14,6 +14,7 @@ export default function TabsLayout() {
       }}
     >
       <Tabs.Screen name="index" options={{ title: 'Dziś' }} />
+      <Tabs.Screen name="history" options={{ title: 'Historia' }} />
     </Tabs>
   );
 }
