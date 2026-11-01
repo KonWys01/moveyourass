@@ -13,6 +13,7 @@ import {
 import { useMarkDay, useToday, useUploadPhoto } from '@/api/queries';
 import { MAX_PHOTOS, pickPhotos } from '@/api/photos';
 import type { Workout } from '@/api/types';
+import { UpdateBanner } from '@/components/UpdateGate';
 import { WorkoutCard } from '@/components/WorkoutCard';
 import {
   STATUS_LABEL,
@@ -105,6 +106,7 @@ export default function Today() {
         />
       }
     >
+      <UpdateBanner />
       <View style={[s.card, { backgroundColor: t.card }]}>
         <Text style={[s.big, { color: t.text }]}>
           Seria: {d.streak} {d.streak === 1 ? 'tydzień' : 'tyg.'}

@@ -14,6 +14,8 @@ import { createApi, type Api } from '@/api/client';
 import type { TokenResponse, User } from '@/api/types';
 import { API_URL } from '@/config';
 
+import { unregisterDevice } from '@/push';
+
 import { getGoogleIdToken, googleSignOut } from './google';
 import { clearToken, loadToken, saveToken } from './tokenStore';
 
@@ -43,7 +45,13 @@ export function SessionProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isNewUser, setIsNewUser] = useState(false);
 
+  const apiRef = useRef<Api | null>(null);
+
   const signOut = useCallback(async () => {
+    // while the token is still valid: stop pushes to this device
+    if (apiRef.current && tokenRef.current) {
+      await unregisterDevice(apiRef.current);
+    }
     tokenRef.current = null;
     await clearToken();
     await googleSignOut();
@@ -64,6 +72,8 @@ export function SessionProvider({ children }: { children: ReactNode }) {
       }),
     [signOut],
   );
+
+  apiRef.current = api;
 
   // The server computes "today" from the user's stored timezone, so keep
   // it in sync with the device (travel, DST rules changes, new phone).
