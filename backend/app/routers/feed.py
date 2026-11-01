@@ -18,6 +18,7 @@ from app.models import (
     Like,
     User,
 )
+from app.push import Pusher, get_pusher
 from app.schemas import (
     CommentIn,
     CommentOut,
@@ -26,6 +27,7 @@ from app.schemas import (
     UserBrief,
 )
 from app.services.access import can_view
+from app.services.notify import notify
 from app.services.social import social_entries, streak_stats
 from app.storage import Storage, get_storage
 
@@ -34,6 +36,7 @@ router = APIRouter(tags=['feed'])
 Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(current_user)]
 StorageDep = Annotated[Storage, Depends(get_storage)]
+PusherDep = Annotated[Pusher, Depends(get_pusher)]
 
 
 @router.get('/feed')
@@ -108,14 +111,30 @@ async def get_entry(
 
 
 @router.post('/entries/{entry_id}/like', status_code=204)
-async def like(entry_id: uuid.UUID, session: Session, me: CurrentUser) -> None:
+async def like(
+    entry_id: uuid.UUID,
+    session: Session,
+    me: CurrentUser,
+    pusher: PusherDep,
+) -> None:
     entry = await _viewable_entry(session, me, entry_id)
-    await session.execute(
+    result = await session.execute(
         pg_insert(Like)
         .values(user_id=me.id, entry_id=entry.id)
         .on_conflict_do_nothing(index_elements=['user_id', 'entry_id'])
     )
     await session.commit()
+    # Only a new like notifies (repeated taps stay silent).
+    if result.rowcount and entry.user_id != me.id:
+        await notify(
+            session,
+            pusher,
+            entry.user_id,
+            'like',
+            'Nowy lajk',
+            f'{me.first_name} polubił(a) Twój wpis',
+            {'entry_id': str(entry.id)},
+        )
 
 
 @router.delete('/entries/{entry_id}/like', status_code=204)
@@ -156,6 +175,7 @@ async def add_comment(
     body: CommentIn,
     session: Session,
     me: CurrentUser,
+    pusher: PusherDep,
 ) -> CommentOut:
     entry = await _viewable_entry(session, me, entry_id)
     text = body.text.strip()
@@ -165,6 +185,16 @@ async def add_comment(
     session.add(comment)
     await session.commit()
     await session.refresh(comment)
+    if entry.user_id != me.id:
+        await notify(
+            session,
+            pusher,
+            entry.user_id,
+            'comment',
+            'Nowy komentarz',
+            f'{me.first_name}: {comment.text[:80]}',
+            {'entry_id': str(entry.id)},
+        )
     return CommentOut(
         id=comment.id,
         user=UserBrief.model_validate(me),
