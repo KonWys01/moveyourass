@@ -63,12 +63,20 @@ class WorkoutIn(BaseModel):
     description: str | None = Field(default=None, max_length=500)
 
 
+class PhotoOut(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    url: str | None = None
+
+
 class WorkoutOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     id: uuid.UUID
     category: CategoryOut
     description: str | None
+    photos: list[PhotoOut] = []
 
 
 class DayEntryOut(BaseModel):
