@@ -18,6 +18,7 @@ class Settings(BaseSettings):
     supabase_bucket: str = 'photos'
     day_buffer_end_hour: int = 1
     max_photos_per_workout: int = 5
+    rest_hint_days: int = 3
 
 
 @lru_cache

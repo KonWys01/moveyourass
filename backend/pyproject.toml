@@ -33,6 +33,7 @@ testpaths = ["tests"]
 [tool.ruff]
 target-version = "py312"
 line-length = 79
+extend-exclude = ["migrations/versions"]
 
 [tool.ruff.format]
 quote-style = "single"
