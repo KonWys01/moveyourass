@@ -3,6 +3,7 @@ import hmac
 import logging
 import uuid
 from collections.abc import AsyncIterator
+from pathlib import Path
 
 from fastapi import FastAPI
 from sqladmin import Admin, ModelView, action
@@ -16,6 +17,7 @@ from app import google
 from app.config import get_settings
 from app.db import SessionLocal, engine
 from app.models import (
+    AppVersion,
     Category,
     Comment,
     DayEntry,
@@ -35,7 +37,7 @@ from app.services.users import (
 from app.storage import get_storage
 
 log = logging.getLogger(__name__)
-TEMPLATES_DIR = 'app/admin_templates'
+TEMPLATES_DIR = str(Path(__file__).parent / 'admin_templates')
 
 
 @contextlib.asynccontextmanager
@@ -248,8 +250,22 @@ class DeviceTokenAdmin(ModelView, model=DeviceToken):
     column_list = [DeviceToken.user_id, DeviceToken.created_at]
 
 
+class AppVersionAdmin(ModelView, model=AppVersion):
+    name = 'Wersja aplikacji'
+    name_plural = 'Wersje aplikacji'
+    icon = 'fa-solid fa-mobile-screen'
+    column_list = [
+        AppVersion.latest_version,
+        AppVersion.min_version,
+        AppVersion.download_url,
+        AppVersion.updated_at,
+    ]
+    column_default_sort = [(AppVersion.id, True)]
+
+
 VIEWS = [
     UserAdmin,
+    AppVersionAdmin,
     CategoryAdmin,
     DayEntryAdmin,
     WorkoutAdmin,

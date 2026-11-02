@@ -5,7 +5,16 @@ from fastapi import FastAPI
 
 from app.admin import setup_admin
 from app.config import get_settings
-from app.routers import auth, entries, feed, me, notifications, photos, users
+from app.routers import (
+    auth,
+    entries,
+    feed,
+    me,
+    meta,
+    notifications,
+    photos,
+    users,
+)
 from app.scheduler import reminder_loop
 
 
@@ -29,9 +38,7 @@ app.include_router(feed.router)
 app.include_router(notifications.router)
 
 
-@app.get('/health')
-async def health() -> dict[str, str]:
-    return {'status': 'ok'}
+app.include_router(meta.router)
 
 
 setup_admin(app)
