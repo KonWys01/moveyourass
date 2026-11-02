@@ -1,0 +1,44 @@
+{
+  "expo": {
+    "name": "MoveYourAss",
+    "slug": "moveyourass",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "android": {
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "package": "com.konwys01.moveyourass",
+      "versionCode": 1,
+      "googleServicesFile": "./google-services.json"
+    },
+    "plugins": [
+      "expo-router",
+      "expo-status-bar",
+      "expo-secure-store",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Aplikacja potrzebuje dostępu do zdjęć, żebyś mógł wybrać zdjęcie z treningu.",
+          "microphonePermission": false
+        }
+      ],
+      "expo-notifications",
+      "@react-native-google-signin/google-signin"
+    ],
+    "scheme": "moveyourass",
+    "platforms": [
+      "android"
+    ],
+    "extra": {
+      "apiUrl": "",
+      "googleWebClientId": ""
+    }
+  }
+}
