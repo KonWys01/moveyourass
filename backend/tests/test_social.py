@@ -212,7 +212,8 @@ async def test_feed_pagination_cursor(pub, viewer, session, monkeypatch):
     first = (await viewer.get('/feed', params={'limit': 1})).json()
     assert [i['id'] for i in first] == [ids[1]]
 
-    cursor = datetime(2026, 1, 6, 12, tzinfo=UTC).isoformat()
+    # the cursor is the last item's own created_at, as the app uses it
+    cursor = first[0]['created_at']
     second = (
         await viewer.get('/feed', params={'limit': 1, 'before': cursor})
     ).json()

@@ -84,6 +84,7 @@ class DayEntryOut(BaseModel):
 
     id: uuid.UUID
     date: date
+    created_at: datetime
     status: str
     workouts: list[WorkoutOut]
 
