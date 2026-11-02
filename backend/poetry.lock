@@ -686,7 +686,7 @@ files = [
 google-auth = ">=2.14.1,<3.0.0"
 googleapis-common-protos = ">=1.69.2,<2.0.0"
 grpcio = [
-    {version = ">=1.59.0,<2.0.0", optional = true, markers = "extra == \"grpc\""},
+    {version = ">=1.59.0,<2.0.0", optional = true, markers = "python_version < \"3.14\" and extra == \"grpc\""},
     {version = ">=1.75.1,<2.0.0", optional = true, markers = "python_version >= \"3.14\" and extra == \"grpc\""},
 ]
 grpcio-status = [
@@ -1325,6 +1325,36 @@ files = [
     {file = "iniconfig-2.3.1-py3-none-any.whl", hash = "sha256:9121e2c1fdb355232495be3194c8dfe87ccc2d5dee45947b78e68f499790d7a7"},
     {file = "iniconfig-2.3.1.tar.gz", hash = "sha256:67f4b9c50da0dedf52af349e7749a80a9057a5031199791b906c3bb3ae878960"},
 ]
+
+[[package]]
+name = "itsdangerous"
+version = "2.2.0"
+description = "Safely pass data to untrusted environments and back."
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "itsdangerous-2.2.0-py3-none-any.whl", hash = "sha256:c6242fc49e35958c8b15141343aa660db5fc54d4f13a1db01a3f5891b98700ef"},
+    {file = "itsdangerous-2.2.0.tar.gz", hash = "sha256:e0050c0b7da1eea53ffaf149c0cfbb5c6e2e2b69c4bef22c81fa6eb73e5f6173"},
+]
+
+[[package]]
+name = "jinja2"
+version = "3.1.6"
+description = "A very fast and expressive template engine."
+optional = false
+python-versions = ">=3.7"
+groups = ["main"]
+files = [
+    {file = "jinja2-3.1.6-py3-none-any.whl", hash = "sha256:85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67"},
+    {file = "jinja2-3.1.6.tar.gz", hash = "sha256:0137fb05990d35f1275a587e9aee6d56da821fc83491a0fb838183be43f66d6d"},
+]
+
+[package.dependencies]
+MarkupSafe = ">=2.0"
+
+[package.extras]
+i18n = ["Babel (>=2.7)"]
 
 [[package]]
 name = "mako"
@@ -2261,6 +2291,30 @@ files = [
 ]
 
 [[package]]
+name = "sqladmin"
+version = "0.32.0"
+description = "SQLAlchemy admin for FastAPI and Starlette"
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "sqladmin-0.32.0-py3-none-any.whl", hash = "sha256:4f5cff4ab8e5349a3dcad17f3a4d46a7867b54b92ac45e5626fdb96e465c127f"},
+    {file = "sqladmin-0.32.0.tar.gz", hash = "sha256:4433dd89f6442856efa8f1ed1acf4b1b8ba67abe15ca54f9364c043ed301c823"},
+]
+
+[package.dependencies]
+jinja2 = "*"
+python-multipart = "*"
+sqlalchemy = ">=2.0"
+starlette = ">=0.50,<2.0.0"
+wtforms = ">=3.1,<3.3"
+
+[package.extras]
+auth = ["itsdangerous"]
+full = ["babel", "itsdangerous"]
+i18n = ["babel"]
+
+[[package]]
 name = "sqlalchemy"
 version = "2.1.6"
 description = "Database Abstraction Library"
@@ -2751,7 +2805,25 @@ files = [
     {file = "websockets-17.4.tar.gz", hash = "sha256:09d3939b70df0c8ad2da145ebd50978bccaee1d565e838b0e7921a34d38571eb"},
 ]
 
+[[package]]
+name = "wtforms"
+version = "3.2.2"
+description = "Form validation and rendering for Python web development."
+optional = false
+python-versions = ">=3.10"
+groups = ["main"]
+files = [
+    {file = "wtforms-3.2.2-py3-none-any.whl", hash = "sha256:72b90d5d921bd3119252069cf0301e9c13915f9e52792652bc91c5dda4b79e56"},
+    {file = "wtforms-3.2.2.tar.gz", hash = "sha256:7b00c73f8670f35d4edb0293dcd81b980528bee72fd662b182aaba27ae570b93"},
+]
+
+[package.dependencies]
+markupsafe = ">=1.1.1"
+
+[package.extras]
+email = ["email-validator (>=2.0)"]
+
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.12,<4.0"
-content-hash = "c129886c329dbe74e2ff2c1bb47db5a0662352cb7236ed8f411c9fbf99e3c0f8"
+content-hash = "a085123a055472276326ceec0ac3b35a9e2bc7b77be2fb68bdbe20e4e9b261b2"

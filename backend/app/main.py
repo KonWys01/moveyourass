@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
+from app.admin import setup_admin
 from app.config import get_settings
 from app.routers import auth, entries, feed, me, notifications, photos, users
 from app.scheduler import reminder_loop
@@ -31,3 +32,6 @@ app.include_router(notifications.router)
 @app.get('/health')
 async def health() -> dict[str, str]:
     return {'status': 'ok'}
+
+
+setup_admin(app)

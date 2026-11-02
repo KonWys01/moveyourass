@@ -20,7 +20,11 @@ class User(Base):
     timezone: Mapped[str] = mapped_column(String, default='Europe/Warsaw')
     streak_threshold: Mapped[int] = mapped_column(Integer, default=1)
     is_admin: Mapped[bool] = mapped_column(Boolean, default=False)
+    can_access_admin: Mapped[bool] = mapped_column(Boolean, default=False)
     is_blocked: Mapped[bool] = mapped_column(Boolean, default=False)
     created_at: Mapped[datetime] = mapped_column(
         DateTime(timezone=True), server_default=func.now()
     )
+
+    def __str__(self) -> str:
+        return f'{self.first_name} {self.last_name} <{self.email}>'
