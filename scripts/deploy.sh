@@ -5,7 +5,7 @@
 #   ./scripts/deploy.sh sha-abc123 # deploys (or rolls back to) a given tag
 #
 # Order: pull -> migrate -> rolling backend restart (new container must be
-# healthy BEFORE the old one is stopped) -> caddy.
+# healthy BEFORE the old one is stopped).
 #
 # NOTE: migrations run while the old code is still serving, so keep them
 # backwards compatible (add columns/tables first, drop them in a later deploy).
@@ -61,13 +61,8 @@ for id in $old_ids; do
   docker rm "$id" >/dev/null
 done
 
-echo "==> Updating remaining services (caddy)"
-docker compose up -d --remove-orphans
-
-# Caddyfile is a bind mount, so `up -d` does not notice edits to it.
-echo "==> Reloading Caddy config"
-docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile
-
 docker image prune -f >/dev/null
 echo "==> Done"
 docker compose ps
+# Caddy is NOT part of this stack: it is the shared one from the other
+# project on this server (see README). Its config is not touched here.
