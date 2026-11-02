@@ -19,6 +19,14 @@ function Routes() {
       <Stack.Protected guard={status === 'signedIn' && !isNewUser}>
         <Stack.Screen name="(tabs)" />
         <Stack.Screen
+          name="user/[id]"
+          options={{ headerShown: true, title: '' }}
+        />
+        <Stack.Screen
+          name="entry/[id]"
+          options={{ headerShown: true, title: 'Wpis' }}
+        />
+        <Stack.Screen
           name="add-workout"
           options={{
             headerShown: true,
