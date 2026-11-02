@@ -1,0 +1,22 @@
+{% extends "sqladmin/base.html" %}
+{% block body %}
+<div class="d-flex align-items-center justify-content-center vh-100">
+  <div class="col-lg-4 col-md-6 card card-md">
+    <div class="card-body text-center">
+      <h2 class="card-title mb-4">{{ admin.title }}</h2>
+      {% if error %}
+      <div class="alert alert-danger">{{ error }}</div>
+      {% endif %}
+      <script src="https://accounts.google.com/gsi/client" async defer></script>
+      <div id="g_id_onload"
+           data-client_id="{{ google_client_id }}"
+           data-login_uri="{{ url_for('admin:login') }}"
+           data-ux_mode="redirect"
+           data-auto_prompt="false"></div>
+      <div class="g_id_signin d-flex justify-content-center"
+           data-type="standard" data-size="large"
+           data-text="signin_with" data-locale="pl"></div>
+    </div>
+  </div>
+</div>
+{% endblock %}
