@@ -24,6 +24,18 @@ services:
     env_file: .env
     # No container_name / published ports on purpose: scripts/deploy.sh
     # runs old and new containers side by side (--scale backend=2).
+    # The shared Caddy (from the other stack on this server) reaches us
+    # over the external `web` network by the UNIQUE alias `mya-backend`
+    # (both stacks have a service called `backend`; sharing that name
+    # would send traffic to the wrong app).
+    networks:
+      web:
+        aliases:
+          - mya-backend
+    volumes:
+      # directory mount (not a single file): a missing host file would be
+      # created by Docker as a directory and break Firebase startup
+      - ./secrets:/run/secrets:ro
     stop_grace_period: 30s
     healthcheck:
       # /health runs `select 1`, so "healthy" means the DB is reachable.
@@ -37,20 +49,6 @@ services:
       retries: 12
       start_period: 15s
 
-  caddy:
-    image: caddy:2-alpine
-    restart: unless-stopped
-    env_file: .env
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile:ro
-      - caddy_data:/data
-      - caddy_config:/config
-    depends_on:
-      - backend
-
-volumes:
-  caddy_data:
-  caddy_config:
+networks:
+  web:
+    external: true
