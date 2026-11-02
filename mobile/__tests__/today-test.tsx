@@ -42,6 +42,15 @@ const base = {
   show_rest_hint: false,
 };
 
+// every screen query goes through mockApi.get; route by path
+function serve(today: unknown) {
+  mockApi.get.mockImplementation(async (path: string) =>
+    path === '/app/version'
+      ? { update_available: false, update_required: false }
+      : today,
+  );
+}
+
 beforeEach(() => {
   mockApi.get.mockReset();
   mockApi.post.mockReset();
@@ -49,7 +58,7 @@ beforeEach(() => {
 });
 
 test('shows streak and week progress', async () => {
-  mockApi.get.mockResolvedValue(base);
+  serve(base);
   await renderToday();
 
   expect(await screen.findByText('Seria: 3 tyg.')).toBeTruthy();
@@ -57,7 +66,7 @@ test('shows streak and week progress', async () => {
 });
 
 test('shows rest hint after days without training', async () => {
-  mockApi.get.mockResolvedValue({
+  serve({
     ...base,
     days_since_workout: 4,
     show_rest_hint: true,
@@ -68,7 +77,7 @@ test('shows rest hint after days without training', async () => {
 });
 
 test('marks rest through the API', async () => {
-  mockApi.get.mockResolvedValue(base);
+  serve(base);
   mockApi.post.mockResolvedValue({});
   await renderToday();
 
@@ -76,11 +85,15 @@ test('marks rest through the API', async () => {
 
   expect(mockApi.post).toHaveBeenCalledWith('/entries/rest');
   // let the mutation finish and the refetch after it settle
-  await waitFor(() => expect(mockApi.get).toHaveBeenCalledTimes(2));
+  await waitFor(() =>
+    expect(
+      mockApi.get.mock.calls.filter((c) => c[0] === '/entries/today'),
+    ).toHaveLength(2),
+  );
 });
 
 test('rest and sick buttons are hidden once trained today', async () => {
-  mockApi.get.mockResolvedValue({
+  serve({
     ...base,
     entry: {
       id: 'e1',
@@ -103,14 +116,14 @@ test('rest and sick buttons are hidden once trained today', async () => {
 });
 
 test('says when the day is counted for yesterday (midnight buffer)', async () => {
-  mockApi.get.mockResolvedValue({ ...base, date: '2000-01-03' });
+  serve({ ...base, date: '2000-01-03' });
   await renderToday();
 
   expect(await screen.findByText(/Zaliczone za:/)).toBeTruthy();
 });
 
 test('add workout opens the form', async () => {
-  mockApi.get.mockResolvedValue(base);
+  serve(base);
   await renderToday();
 
   await fireEvent.press(await screen.findByText('Dodaj trening'));
@@ -119,13 +132,16 @@ test('add workout opens the form', async () => {
 });
 
 test('load error offers retry', async () => {
-  mockApi.get.mockRejectedValueOnce(new Error('x'));
+  mockApi.get.mockImplementation(async (path: string) => {
+    if (path === '/app/version') return { update_available: false };
+    throw new Error('x');
+  });
   await renderToday();
 
   expect(
     await screen.findByText('Nie udało się wczytać danych.'),
   ).toBeTruthy();
-  mockApi.get.mockResolvedValue(base);
+  serve(base);
   await fireEvent.press(screen.getByText('Spróbuj ponownie'));
   expect(await screen.findByText('Seria: 3 tyg.')).toBeTruthy();
 });

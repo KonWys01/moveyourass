@@ -17,6 +17,7 @@ export default function TabsLayout() {
       <Tabs.Screen name="feed" options={{ title: 'Tablica' }} />
       <Tabs.Screen name="search" options={{ title: 'Szukaj' }} />
       <Tabs.Screen name="history" options={{ title: 'Historia' }} />
+      <Tabs.Screen name="settings" options={{ title: 'Ustawienia' }} />
     </Tabs>
   );
 }
