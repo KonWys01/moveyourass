@@ -1,0 +1,35 @@
+name: Tests
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: moveyourass
+          POSTGRES_PASSWORD: moveyourass
+          POSTGRES_DB: moveyourass
+        ports:
+          - 5433:5432
+        options: >-
+          --health-cmd "pg_isready -U moveyourass"
+          --health-interval 3s --health-retries 20
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - run: pip install poetry
+      - run: poetry install
+      - run: poetry run ruff check .
+      - run: poetry run alembic upgrade head
+      - run: poetry run pytest -q
