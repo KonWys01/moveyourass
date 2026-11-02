@@ -20,12 +20,15 @@ from app.schemas import (
     WorkoutIn,
 )
 from app.services.days import entry_date_for
+from app.services.serialize import entry_out
 from app.services.streak import compute_streak
+from app.storage import Storage, get_storage
 
 router = APIRouter(tags=['entries'])
 
 Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(current_user)]
+StorageDep = Annotated[Storage, Depends(get_storage)]
 
 
 def _today(user: User) -> date:
@@ -69,7 +72,10 @@ async def list_categories(
 
 @router.post('/entries/workouts', status_code=201)
 async def add_workout(
-    body: WorkoutIn, session: Session, user: CurrentUser
+    body: WorkoutIn,
+    session: Session,
+    user: CurrentUser,
+    storage: StorageDep,
 ) -> DayEntryOut:
     category = await session.get(Category, body.category_id)
     if category is None or not category.is_active:
@@ -86,42 +92,54 @@ async def add_workout(
     )
     await session.commit()
     await session.refresh(entry, ['workouts'])
-    return DayEntryOut.model_validate(entry)
+    return await entry_out(entry, storage)
 
 
 async def _mark(
-    session: AsyncSession, user: User, status: EntryStatus
+    session: AsyncSession,
+    user: User,
+    status: EntryStatus,
+    storage: Storage,
 ) -> DayEntryOut:
     entry = await _get_or_create_entry(session, user, _today(user), status)
     await session.commit()
-    return DayEntryOut.model_validate(entry)
+    return await entry_out(entry, storage)
 
 
 @router.post('/entries/rest', status_code=201)
-async def mark_rest(session: Session, user: CurrentUser) -> DayEntryOut:
-    return await _mark(session, user, EntryStatus.rest)
+async def mark_rest(
+    session: Session, user: CurrentUser, storage: StorageDep
+) -> DayEntryOut:
+    return await _mark(session, user, EntryStatus.rest, storage)
 
 
 @router.post('/entries/sick', status_code=201)
-async def mark_sick(session: Session, user: CurrentUser) -> DayEntryOut:
-    return await _mark(session, user, EntryStatus.sick)
+async def mark_sick(
+    session: Session, user: CurrentUser, storage: StorageDep
+) -> DayEntryOut:
+    return await _mark(session, user, EntryStatus.sick, storage)
 
 
 @router.get('/entries/today')
-async def today(session: Session, user: CurrentUser) -> TodayOut:
+async def today(
+    session: Session, user: CurrentUser, storage: StorageDep
+) -> TodayOut:
     day = _today(user)
     result = await session.execute(
         select(DayEntry).where(DayEntry.user_id == user.id)
     )
     entries = list(result.scalars())
     statuses = {e.date: e.status.value for e in entries}
+    todays = next((e for e in entries if e.date == day), None)
     info = compute_streak(statuses, day, user.streak_threshold)
     workout_days = [e.date for e in entries if e.status == 'workout']
     since = (day - max(workout_days)).days if workout_days else None
     hint_after = get_settings().rest_hint_days
     return TodayOut(
         date=day,
-        entry=next((e for e in entries if e.date == day), None),
+        entry=(
+            await entry_out(todays, storage) if todays is not None else None
+        ),
         streak=info.streak,
         week_progress=info.week_progress,
         week_threshold=info.week_threshold,
@@ -135,6 +153,7 @@ async def today(session: Session, user: CurrentUser) -> TodayOut:
 async def my_entries(
     session: Session,
     user: CurrentUser,
+    storage: StorageDep,
     limit: int = 30,
     offset: int = 0,
 ) -> list[DayEntryOut]:
@@ -145,4 +164,4 @@ async def my_entries(
         .limit(min(max(limit, 1), 100))
         .offset(max(offset, 0))
     )
-    return [DayEntryOut.model_validate(e) for e in result.scalars()]
+    return [await entry_out(e, storage) for e in result.scalars()]

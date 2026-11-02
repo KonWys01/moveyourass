@@ -16,6 +16,7 @@ from sqlalchemy import (
 from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.db import Base
+from app.models.photo import Photo
 
 
 class EntryStatus(enum.StrEnum):
@@ -80,4 +81,9 @@ class Workout(Base):
         DateTime(timezone=True), server_default=func.now()
     )
     entry: Mapped[DayEntry] = relationship(back_populates='workouts')
+    photos: Mapped[list['Photo']] = relationship(
+        order_by='Photo.created_at',
+        lazy='selectin',
+        cascade='all, delete-orphan',
+    )
     category: Mapped[Category] = relationship(lazy='joined')

@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.config import get_settings
 from app.db import get_session
 from app.main import app
+from app.storage import get_storage
 
 
 @pytest.fixture
@@ -35,4 +36,26 @@ async def client(session: AsyncSession) -> AsyncIterator[httpx.AsyncClient]:
         transport=transport, base_url='http://test'
     ) as c:
         yield c
-    app.dependency_overrides.clear()
+    app.dependency_overrides.pop(get_session, None)
+
+
+class FakeStorage:
+    def __init__(self):
+        self.files: dict[str, bytes] = {}
+
+    async def upload(self, path, data):
+        self.files[path] = data
+
+    async def delete(self, path):
+        self.files.pop(path, None)
+
+    async def signed_url(self, path):
+        return f'https://signed.test/{path}?token=t'
+
+
+@pytest.fixture(autouse=True)
+def storage():
+    fake = FakeStorage()
+    app.dependency_overrides[get_storage] = lambda: fake
+    yield fake
+    app.dependency_overrides.pop(get_storage, None)
