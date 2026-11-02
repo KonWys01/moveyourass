@@ -16,35 +16,16 @@ poetry run uvicorn app.main:app --reload
 
 ## Wdrożenie backendu (serwer z Dockerem, jeden wspólny Caddy)
 
-Na serwerze działa **jeden Caddy** (ten z `do-backend`, ma porty 80/443). Ten
-stack go nie uruchamia: backend dołącza do wspólnej sieci Dockera pod aliasem
-`mya-backend`, a Caddy dostaje jeden dodatkowy blok.
+Na serwerze działa **jeden samodzielny Caddy** (porty 80/443). Ten stack go
+nie uruchamia: backend dołącza do wspólnej sieci Dockera `web` pod aliasem
+`mya-backend`.
 
 ### Jednorazowo: wspólny Caddy
-1. Wspólna sieć: `docker network create web`.
-2. W `do-backend/docker-compose.yml` serwis `caddy` ma być w obu sieciach:
-   ```yaml
-   caddy:
-     networks: [default, web]
-   networks:
-     web:
-       external: true
-   ```
-3. W `do-backend/Caddyfile` dopisz blok dla nowej subdomeny:
-   ```
-   {$MYA_DOMAIN_NAME} {
-   	encode gzip
-   	reverse_proxy mya-backend:8000 {
-   		# rolling deploy: stary kontener może zniknąć w trakcie połączenia
-   		lb_try_duration 5s
-   		lb_try_interval 250ms
-   	}
-   }
-   ```
-   i w `.env` tego stacka dodaj `MYA_DOMAIN_NAME=ruch.twojadomena.pl`.
-4. Zastosuj: `docker compose up -d caddy` (zmiana sieci) i
-   `docker compose exec -T caddy caddy reload --config /etc/caddy/Caddyfile`.
-5. DNS: rekord A subdomeny na IP serwera, **DNS only** (bez proxy Cloudflare).
+Samodzielny Caddy w osobnym folderze (`~/proxy`), z dostępem do sieci `web`.
+Pełna instrukcja: **[`docs/shared-proxy.md`](docs/shared-proxy.md)**: gotowy
+`Caddyfile`, `docker-compose.yml` i `.env` proxy, kolejność przełączenia
+z Caddy z `do-backend` (bez utraty certyfikatów) i wycofanie. Ten stack
+widoczny jest w sieci jako `mya-backend:8000`; DNS: rekord A, **DNS only**.
 
 ### Backend
 1. Na serwerze: sklonuj repo, `cp .env.example .env` i uzupełnij (m.in.
