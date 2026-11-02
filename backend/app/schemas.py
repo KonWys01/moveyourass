@@ -1,5 +1,5 @@
 import uuid
-from datetime import date
+from datetime import date, datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -96,3 +96,54 @@ class TodayOut(BaseModel):
     week_threshold: int
     days_since_workout: int | None
     show_rest_hint: bool
+
+
+class UserBrief(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: uuid.UUID
+    first_name: str
+    last_name: str
+    avatar_url: str | None
+    is_public: bool
+
+
+class UserSearchOut(UserBrief):
+    follow_status: str
+
+
+class StreakOut(BaseModel):
+    streak: int
+    week_progress: int
+    week_threshold: int
+
+
+class ProfileOut(UserSearchOut):
+    can_view: bool
+    stats: StreakOut | None = None
+
+
+class FollowOut(BaseModel):
+    status: str
+
+
+class SocialEntryOut(DayEntryOut):
+    user: UserBrief
+    like_count: int
+    liked_by_me: bool
+    comment_count: int
+
+
+class FeedItemOut(SocialEntryOut):
+    stats: StreakOut
+
+
+class CommentIn(BaseModel):
+    text: str = Field(min_length=1, max_length=500)
+
+
+class CommentOut(BaseModel):
+    id: uuid.UUID
+    user: UserBrief
+    text: str
+    created_at: datetime
