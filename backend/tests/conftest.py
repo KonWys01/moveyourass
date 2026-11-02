@@ -7,6 +7,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine
 from app.config import get_settings
 from app.db import get_session
 from app.main import app
+from app.push import get_pusher
 from app.storage import get_storage
 
 
@@ -59,3 +60,26 @@ def storage():
     app.dependency_overrides[get_storage] = lambda: fake
     yield fake
     app.dependency_overrides.pop(get_storage, None)
+
+
+class FakePusher:
+    def __init__(self):
+        self.sent: list[dict] = []
+        self.dead: list[str] = []
+        self.fail = False
+
+    async def send(self, tokens, title, body, data):
+        if self.fail:
+            raise RuntimeError('fcm down')
+        self.sent.append(
+            {'tokens': tokens, 'title': title, 'body': body, 'data': data}
+        )
+        return [t for t in tokens if t in self.dead]
+
+
+@pytest.fixture(autouse=True)
+def pusher():
+    fake = FakePusher()
+    app.dependency_overrides[get_pusher] = lambda: fake
+    yield fake
+    app.dependency_overrides.pop(get_pusher, None)

@@ -19,6 +19,10 @@ class Settings(BaseSettings):
     day_buffer_end_hour: int = 1
     max_photos_per_workout: int = 5
     rest_hint_days: int = 3
+    firebase_credentials_file: str = ''
+    reminder_hour: int = 20
+    reminder_window_hours: int = 2
+    scheduler_enabled: bool = True
 
 
 @lru_cache

@@ -9,6 +9,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.db import get_session
 from app.deps import current_user
 from app.models import DayEntry, Follow, FollowStatus, User
+from app.push import Pusher, get_pusher
 from app.schemas import (
     FollowOut,
     ProfileOut,
@@ -17,6 +18,7 @@ from app.schemas import (
     UserSearchOut,
 )
 from app.services.access import can_view, follow_status
+from app.services.notify import notify
 from app.services.social import social_entries, streak_stats
 from app.storage import Storage, get_storage
 
@@ -25,6 +27,7 @@ router = APIRouter(tags=['users'])
 Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(current_user)]
 StorageDep = Annotated[Storage, Depends(get_storage)]
+PusherDep = Annotated[Pusher, Depends(get_pusher)]
 
 
 async def _visible_user(session: AsyncSession, user_id: uuid.UUID) -> User:
@@ -111,7 +114,10 @@ async def user_entries(
 
 @router.post('/users/{user_id}/follow')
 async def follow(
-    user_id: uuid.UUID, session: Session, me: CurrentUser
+    user_id: uuid.UUID,
+    session: Session,
+    me: CurrentUser,
+    pusher: PusherDep,
 ) -> FollowOut:
     if user_id == me.id:
         raise HTTPException(400, 'Cannot follow yourself')
@@ -119,12 +125,28 @@ async def follow(
     status = (
         FollowStatus.accepted if target.is_public else FollowStatus.pending
     )
-    await session.execute(
+    result = await session.execute(
         pg_insert(Follow)
         .values(follower_id=me.id, followee_id=target.id, status=status)
         .on_conflict_do_nothing(index_elements=['follower_id', 'followee_id'])
     )
     await session.commit()
+    if result.rowcount:
+        is_request = status == FollowStatus.pending
+        await notify(
+            session,
+            pusher,
+            target.id,
+            'follow_request' if is_request else 'new_follower',
+            'Prośba o obserwowanie' if is_request else 'Nowy obserwujący',
+            f'{me.first_name} {me.last_name}'
+            + (
+                ' chce Cię obserwować'
+                if is_request
+                else ' zaczął(ęła) Cię obserwować'
+            ),
+            {'user_id': str(me.id)},
+        )
     return FollowOut(status=await follow_status(session, me.id, target.id))
 
 
@@ -159,13 +181,27 @@ async def follow_requests(
 
 @router.post('/follow-requests/{follower_id}/accept')
 async def accept_request(
-    follower_id: uuid.UUID, session: Session, me: CurrentUser
+    follower_id: uuid.UUID,
+    session: Session,
+    me: CurrentUser,
+    pusher: PusherDep,
 ) -> FollowOut:
     row = await session.get(Follow, (follower_id, me.id))
     if row is None:
         raise HTTPException(404, 'Request not found')
+    newly = row.status != FollowStatus.accepted
     row.status = FollowStatus.accepted
     await session.commit()
+    if newly:
+        await notify(
+            session,
+            pusher,
+            follower_id,
+            'request_accepted',
+            'Prośba zaakceptowana',
+            f'{me.first_name} {me.last_name} zaakceptował(a) Twoją prośbę',
+            {'user_id': str(me.id)},
+        )
     return FollowOut(status='accepted')
 
 
