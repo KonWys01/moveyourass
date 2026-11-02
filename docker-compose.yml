@@ -1,0 +1,56 @@
+services:
+  # Local development / tests only. Production uses Supabase Postgres.
+  db:
+    profiles: [dev]
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_USER: moveyourass
+      POSTGRES_PASSWORD: moveyourass
+      POSTGRES_DB: moveyourass
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U moveyourass"]
+      interval: 3s
+      retries: 20
+
+  backend:
+    # Production pulls this image from ghcr.io (built by the
+    # "Build and push images" workflow); `build` is for local use.
+    image: ${IMAGE_PREFIX:-ghcr.io/konwys01/moveyourass}/backend:${IMAGE_TAG:-latest}
+    build:
+      context: ./backend
+    restart: unless-stopped
+    env_file: .env
+    # No container_name / published ports on purpose: scripts/deploy.sh
+    # runs old and new containers side by side (--scale backend=2).
+    stop_grace_period: 30s
+    healthcheck:
+      # /health runs `select 1`, so "healthy" means the DB is reachable.
+      test:
+        - CMD
+        - python
+        - -c
+        - "import urllib.request as u; u.urlopen('http://127.0.0.1:8000/health', timeout=4)"
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 15s
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      - backend
+
+volumes:
+  caddy_data:
+  caddy_config:
