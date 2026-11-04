@@ -5,9 +5,11 @@ import uuid
 from collections.abc import AsyncIterator
 from pathlib import Path
 
+import httpx
 from fastapi import FastAPI
-from sqladmin import Admin, ModelView, action
+from sqladmin import Admin, Flash, ModelView, action
 from sqladmin.authentication import AuthenticationBackend
+from sqladmin.flash import FlashLevel
 from sqlalchemy import update
 from sqlalchemy.ext.asyncio import AsyncSession
 from starlette.requests import Request
@@ -28,6 +30,7 @@ from app.models import (
     User,
     Workout,
 )
+from app.services.releases import sync_latest_release
 from app.services.users import (
     find_or_create_user,
     get_by_sub,
@@ -261,6 +264,51 @@ class AppVersionAdmin(ModelView, model=AppVersion):
         AppVersion.updated_at,
     ]
     column_default_sort = [(AppVersion.id, True)]
+    # adds the "check for new versions" button above the list
+    list_template = 'app_version_list.html'
+
+    @action(
+        name='refresh',
+        label='Sprawdź nowe wersje (GitHub)',
+        add_in_list=True,
+        add_in_detail=False,
+    )
+    async def refresh(self, request: Request):
+        """Check GitHub Releases now (the backend also does it by itself).
+
+        Needs no selected row: the list page has a button for it.
+        """
+        repo = get_settings().release_repo
+        if not repo:
+            Flash.flash(
+                request,
+                'Ustaw RELEASE_REPO w .env serwera, żeby sprawdzać GitHub.',
+                FlashLevel.error,
+            )
+            return _redirect_back(request, self.identity)
+        try:
+            async with (
+                httpx.AsyncClient(timeout=15) as client,
+                session_scope() as session,
+            ):
+                new = await sync_latest_release(session, client, repo)
+        except Exception:
+            log.exception('manual release check failed')
+            Flash.flash(
+                request,
+                'Nie udało się sprawdzić GitHuba, spróbuj za chwilę.',
+                FlashLevel.error,
+            )
+        else:
+            if new:
+                Flash.flash(
+                    request, f'Dodano nową wersję: {new}.', FlashLevel.success
+                )
+            else:
+                Flash.flash(
+                    request, 'Brak nowszej wersji niż obecna.', FlashLevel.info
+                )
+        return _redirect_back(request, self.identity)
 
 
 VIEWS = [
