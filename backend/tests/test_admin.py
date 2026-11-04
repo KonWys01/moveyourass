@@ -2,6 +2,7 @@ import contextlib
 import uuid
 from types import SimpleNamespace
 
+import httpx
 import pytest
 from sqlalchemy import select
 
@@ -211,3 +212,96 @@ async def test_photo_moderation_survives_storage_error(monkeypatch):
     await PhotoAdmin().after_model_delete(
         SimpleNamespace(storage_path='x'), None
     )
+
+
+# --- app version: manual refresh button ---
+
+
+async def logged_in_admin(web, session, monkeypatch):
+    await make_user(session, 's1', 'a@x.com', can_access_admin=True)
+    await admin_login(web, monkeypatch)
+
+
+async def test_app_version_list_has_the_refresh_button(
+    web, session, monkeypatch
+):
+    await logged_in_admin(web, session, monkeypatch)
+
+    r = await web.get('/admin/app-version/list')
+
+    assert r.status_code == 200
+    assert 'Sprawdź nowe wersje (GitHub)' in r.text
+    assert '/admin/app-version/action/refresh' in r.text
+
+
+async def test_refresh_requires_login(web):
+    r = await web.get('/admin/app-version/action/refresh?pks=')
+
+    assert r.status_code in (302, 307)
+    assert r.headers['location'].endswith('/admin/login')
+
+
+async def test_refresh_adds_the_new_version_and_says_so(
+    web, session, monkeypatch
+):
+    await logged_in_admin(web, session, monkeypatch)
+    monkeypatch.setattr(get_settings(), 'release_repo', 'o/r')
+    calls = []
+
+    async def fake_sync(sess, client, repo):
+        calls.append(repo)
+        return '0.3.0'
+
+    monkeypatch.setattr('app.admin.sync_latest_release', fake_sync)
+
+    r = await web.get('/admin/app-version/action/refresh?pks=')
+
+    assert r.status_code == 302
+    assert calls == ['o/r']
+    page = await web.get('/admin/app-version/list')
+    assert 'Dodano nową wersję: 0.3.0.' in page.text
+
+
+async def test_refresh_reports_when_nothing_is_newer(
+    web, session, monkeypatch
+):
+    await logged_in_admin(web, session, monkeypatch)
+    monkeypatch.setattr(get_settings(), 'release_repo', 'o/r')
+
+    async def fake_sync(sess, client, repo):
+        return None
+
+    monkeypatch.setattr('app.admin.sync_latest_release', fake_sync)
+
+    await web.get('/admin/app-version/action/refresh?pks=')
+
+    page = await web.get('/admin/app-version/list')
+    assert 'Brak nowszej wersji niż obecna.' in page.text
+
+
+async def test_refresh_without_release_repo_explains_what_to_set(
+    web, session, monkeypatch
+):
+    await logged_in_admin(web, session, monkeypatch)
+    monkeypatch.setattr(get_settings(), 'release_repo', '')
+
+    await web.get('/admin/app-version/action/refresh?pks=')
+
+    page = await web.get('/admin/app-version/list')
+    assert 'RELEASE_REPO' in page.text
+
+
+async def test_refresh_survives_a_github_failure(web, session, monkeypatch):
+    await logged_in_admin(web, session, monkeypatch)
+    monkeypatch.setattr(get_settings(), 'release_repo', 'o/r')
+
+    async def boom(sess, client, repo):
+        raise httpx.ConnectError('down')
+
+    monkeypatch.setattr('app.admin.sync_latest_release', boom)
+
+    r = await web.get('/admin/app-version/action/refresh?pks=')
+
+    assert r.status_code == 302
+    page = await web.get('/admin/app-version/list')
+    assert 'Nie udało się sprawdzić GitHuba' in page.text

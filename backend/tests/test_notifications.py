@@ -201,3 +201,67 @@ async def test_reminder_respects_pref_and_needs_token(
     assert (
         await send_due_reminders(session, pusher, utc(2026, 1, 6, 19, 30)) == 0
     )
+
+
+# --- a failed delivery must not cost the user the whole day ---
+
+
+async def test_failed_reminder_is_retried_on_the_next_tick(
+    owner, session, pusher
+):
+    now = utc(2026, 1, 6, 19, 30)  # 20:30 Warsaw
+    pusher.fail = True
+
+    assert await send_due_reminders(session, pusher, now) == 0
+    assert (await session.execute(select(ReminderLog))).first() is None
+
+    pusher.fail = False
+    assert await send_due_reminders(session, pusher, now) == 1
+    assert len(pusher.sent) == 1
+    assert (await session.execute(select(ReminderLog))).first() is not None
+
+
+async def test_a_delivered_reminder_is_not_repeated_on_later_ticks(
+    owner, session, pusher
+):
+    assert (
+        await send_due_reminders(session, pusher, utc(2026, 1, 6, 19, 30)) == 1
+    )
+
+    assert (
+        await send_due_reminders(session, pusher, utc(2026, 1, 6, 19, 31)) == 0
+    )
+    assert (
+        await send_due_reminders(session, pusher, utc(2026, 1, 6, 20, 45)) == 0
+    )
+    assert len(pusher.sent) == 1
+
+
+async def test_repeated_failures_keep_retrying_without_crashing(
+    owner, session, pusher
+):
+    pusher.fail = True
+
+    for minute in range(3):
+        result = await send_due_reminders(
+            session, pusher, utc(2026, 1, 6, 19, 30 + minute)
+        )
+        assert result == 0
+
+    assert (await session.execute(select(ReminderLog))).first() is None
+    pusher.fail = False
+    assert (
+        await send_due_reminders(session, pusher, utc(2026, 1, 6, 19, 40)) == 1
+    )
+
+
+async def test_retry_stops_when_the_window_closes(owner, session, pusher):
+    pusher.fail = True
+    await send_due_reminders(session, pusher, utc(2026, 1, 6, 20, 50))  # 21:50
+    pusher.fail = False
+
+    # 22:00 Warsaw: outside 20:00-21:59, so no late reminder
+    assert (
+        await send_due_reminders(session, pusher, utc(2026, 1, 6, 21, 0)) == 0
+    )
+    assert pusher.sent == []

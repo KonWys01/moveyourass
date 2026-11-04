@@ -16,6 +16,7 @@ import {
   useSetNotifPref,
   useUpdateProfile,
 } from '@/api/settings';
+import { useVersion } from '@/api/version';
 import { useSession } from '@/auth/session';
 import { fullName } from '@/components/Avatar';
 import { API_URL } from '@/config';
@@ -29,6 +30,7 @@ export default function Settings() {
   const setPref = useSetNotifPref();
   const update = useUpdateProfile();
   const del = useDeleteAccount();
+  const version = useVersion().data;
 
   if (!user) return null;
 
@@ -114,6 +116,13 @@ export default function Settings() {
       <Text style={{ color: t.muted }}>
         Wersja {Application.nativeApplicationVersion ?? '?'}
       </Text>
+      {version?.update_available && !version.update_required && (
+        <Button
+          title={`Pobierz nową wersję ${version.latest_version}`}
+          onPress={() => void Linking.openURL(version.download_url)}
+          disabled={!version.download_url}
+        />
+      )}
       <Button
         title="Polityka prywatności"
         variant="secondary"
