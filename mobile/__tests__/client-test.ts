@@ -142,6 +142,19 @@ test('network failure becomes ApiError status 0', async () => {
   expect(err.status).toBe(0);
 });
 
+test('network failure keeps the original reason for diagnosis', async () => {
+  const f = jest.fn(async () => {
+    throw new TypeError('Network request failed');
+  }) as unknown as typeof fetch;
+  const { api } = make(f);
+
+  const err = await failure(api.get('/me'));
+
+  expect(err.status).toBe(0);
+  expect(err.message).toContain('Brak połączenia z serwerem');
+  expect(err.message).toContain('Network request failed');
+});
+
 test('non-json error body does not crash', async () => {
   const { api } = make(fakeFetch(502, '<html>bad gateway</html>'));
 

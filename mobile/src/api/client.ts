@@ -62,8 +62,11 @@ export function createApi(opts: ApiOptions) {
         headers,
         body,
       });
-    } catch {
-      throw new ApiError(0, 'Brak połączenia z serwerem');
+    } catch (e) {
+      // keep the original reason ("Network request failed", unreadable
+      // file, ...): without it a failed upload cannot be diagnosed
+      const reason = e instanceof Error && e.message ? ` (${e.message})` : '';
+      throw new ApiError(0, `Brak połączenia z serwerem${reason}`);
     }
 
     if (response.status === 204) return undefined as T;

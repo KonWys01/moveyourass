@@ -1,3 +1,4 @@
+import { ApiError } from '@/api/client';
 import type { EntryStatus } from '@/api/types';
 
 /** 'YYYY-MM-DD' -> local Date at midnight (no UTC shift). */
@@ -31,4 +32,17 @@ export const STATUS_LABEL: Record<EntryStatus, string> = {
 
 export function pluralDays(n: number): string {
   return n === 1 ? '1 dzień' : `${n} dni`;
+}
+
+/** Human-readable reason for any error, with the HTTP status if known. */
+export function describeError(e: unknown): string {
+  if (e instanceof ApiError) {
+    return e.status ? `${e.status}: ${e.message}` : e.message;
+  }
+  return e instanceof Error ? e.message : String(e);
+}
+
+/** First chars of a file URI: shows file:// vs content:// without noise. */
+export function shortUri(uri: string, max = 70): string {
+  return uri.length > max ? `${uri.slice(0, max)}…` : uri;
 }
