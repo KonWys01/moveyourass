@@ -1,0 +1,10 @@
+{% extends "sqladmin/list.html" %}
+{% block model_menu_bar %}
+{{ super() }}
+<div class="ms-3 d-inline-block">
+  <a class="btn btn-primary"
+     href="{{ model_view._url_for_action(request, 'refresh') }}?pks=">
+    Sprawdź nowe wersje (GitHub)
+  </a>
+</div>
+{% endblock %}

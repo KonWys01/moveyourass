@@ -189,6 +189,40 @@ test('privacy policy opens the backend page', async () => {
   open.mockRestore();
 });
 
+describe('settings update button', () => {
+  function serve(version: unknown) {
+    mockApi.get.mockImplementation(async (path: string) =>
+      path === '/app/version' ? version : PREFS,
+    );
+  }
+
+  test('offers the download when a newer version exists', async () => {
+    serve({
+      latest_version: '0.2.0',
+      download_url: 'https://dl.example/app.apk',
+      update_available: true,
+      update_required: false,
+    });
+    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    await wrap(<Settings />);
+
+    await fireEvent.press(
+      await screen.findByText('Pobierz nową wersję 0.2.0'),
+    );
+
+    expect(open).toHaveBeenCalledWith('https://dl.example/app.apk');
+    open.mockRestore();
+  });
+
+  test('no button when up to date', async () => {
+    serve({ latest_version: '0.1.0', update_available: false });
+    await wrap(<Settings />);
+    await screen.findByText('Polityka prywatności');
+
+    expect(screen.queryByText(/Pobierz nową wersję/)).toBeNull();
+  });
+});
+
 describe('update gate', () => {
   const app = (
     <UpdateGate>

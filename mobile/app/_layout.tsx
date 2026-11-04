@@ -6,14 +6,24 @@ import { useState } from 'react';
 import { SessionProvider, useSession } from '@/auth/session';
 import { PushBootstrap } from '@/components/PushBootstrap';
 import { UpdateGate } from '@/components/UpdateGate';
+import { useTheme } from '@/theme';
 
 function Routes() {
   const { status, isNewUser } = useSession();
+  const t = useTheme();
   if (status === 'loading') return null;
   return (
     <UpdateGate>
       {status === 'signedIn' && !isNewUser && <PushBootstrap />}
-      <Stack screenOptions={{ headerShown: false }}>
+      <Stack
+        screenOptions={{
+          headerShown: false,
+          // headers/screens of user, entry, add-workout follow the theme
+          headerStyle: { backgroundColor: t.bg },
+          headerTintColor: t.text,
+          contentStyle: { backgroundColor: t.bg },
+        }}
+      >
         <Stack.Protected guard={status === 'signedOut'}>
           <Stack.Screen name="sign-in" />
         </Stack.Protected>
