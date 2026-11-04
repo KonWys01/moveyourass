@@ -15,16 +15,26 @@ from app.routers import (
     photos,
     users,
 )
-from app.scheduler import reminder_loop
+from app.scheduler import release_loop, reminder_loop
 
 
 @asynccontextmanager
 async def lifespan(_: FastAPI):
-    task = None
-    if get_settings().scheduler_enabled:
-        task = asyncio.create_task(reminder_loop())
+    settings = get_settings()
+    tasks: list[asyncio.Task] = []
+    if settings.scheduler_enabled:
+        tasks.append(asyncio.create_task(reminder_loop()))
+        if settings.release_repo:
+            tasks.append(
+                asyncio.create_task(
+                    release_loop(
+                        settings.release_repo,
+                        settings.release_check_interval_hours,
+                    )
+                )
+            )
     yield
-    if task:
+    for task in tasks:
         task.cancel()
 
 
