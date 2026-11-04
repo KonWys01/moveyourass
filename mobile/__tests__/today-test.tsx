@@ -7,13 +7,21 @@ import {
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 
 import Today from '../app/(tabs)/index';
+import { ApiError } from '@/api/client';
 import { localDayString } from '@/format';
+import { Alert } from 'react-native';
 
 const mockPush = jest.fn();
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: mockPush }) }));
 jest.mock('expo-image-picker', () => ({}));
 
-const mockApi = { get: jest.fn(), post: jest.fn() };
+const mockPick = jest.fn();
+jest.mock('@/api/photos', () => ({
+  ...jest.requireActual('@/api/photos'),
+  pickPhotos: (...args: unknown[]) => mockPick(...args),
+}));
+
+const mockApi = { get: jest.fn(), post: jest.fn(), upload: jest.fn() };
 jest.mock('@/auth/session', () => ({
   useSession: () => ({ api: mockApi }),
 }));
@@ -144,4 +152,42 @@ test('load error offers retry', async () => {
   serve(base);
   await fireEvent.press(screen.getByText('Spróbuj ponownie'));
   expect(await screen.findByText('Seria: 3 tyg.')).toBeTruthy();
+});
+
+test('a failed photo upload says why and for which file', async () => {
+  const alert = jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  const warn = jest.spyOn(console, 'warn').mockImplementation(() => {});
+  serve({
+    ...base,
+    entry: {
+      id: 'e1',
+      date: base.date,
+      created_at: '2026-01-05T10:00:00+00:00',
+      status: 'workout',
+      workouts: [
+        {
+          id: 'w1',
+          category: { id: 1, name: 'Bieganie' },
+          description: null,
+          photos: [],
+        },
+      ],
+    },
+  });
+  mockPick.mockResolvedValue(['file:///data/cache/ImagePicker/a.jpeg']);
+  mockApi.upload.mockRejectedValue(
+    new ApiError(0, 'Brak połączenia z serwerem (Network request failed)'),
+  );
+  await renderToday();
+
+  await fireEvent.press(await screen.findByText('Galeria'));
+
+  await waitFor(() => expect(alert).toHaveBeenCalled());
+  const [title, message] = alert.mock.calls[0] as [string, string];
+  expect(title).toBe('Nie wysłano zdjęć: 1 z 1');
+  expect(message).toContain('Network request failed');
+  expect(message).toContain('file:///data/cache/ImagePicker/a.jpeg');
+  expect(warn).toHaveBeenCalled(); // also goes to logcat for adb
+  alert.mockRestore();
+  warn.mockRestore();
 });
