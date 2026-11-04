@@ -1,8 +1,11 @@
+import { ApiError } from '@/api/client';
 import {
+  describeError,
   formatDay,
   localDayString,
   parseDay,
   pluralDays,
+  shortUri,
   weekdayName,
 } from '@/format';
 
@@ -26,4 +29,22 @@ test('weekday and full date are produced', () => {
 test('pluralDays', () => {
   expect(pluralDays(1)).toBe('1 dzień');
   expect(pluralDays(5)).toBe('5 dni');
+});
+
+test('describeError shows the HTTP status when there is one', () => {
+  expect(describeError(new ApiError(413, 'Image too large'))).toBe(
+    '413: Image too large',
+  );
+  expect(describeError(new ApiError(0, 'Brak połączenia (x)'))).toBe(
+    'Brak połączenia (x)',
+  );
+  expect(describeError(new Error('boom'))).toBe('boom');
+  expect(describeError('plain')).toBe('plain');
+});
+
+test('shortUri keeps the scheme visible and truncates long paths', () => {
+  expect(shortUri('file:///a.jpg')).toBe('file:///a.jpg');
+  const long = 'content://media/' + 'x'.repeat(100);
+  expect(shortUri(long).startsWith('content://media/')).toBe(true);
+  expect(shortUri(long).length).toBeLessThan(80);
 });

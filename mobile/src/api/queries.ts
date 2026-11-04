@@ -7,6 +7,8 @@ import {
 
 import { useSession } from '@/auth/session';
 
+import { describeError, shortUri } from '@/format';
+
 import { buildPhotoForm } from './photos';
 import type { Category, DayEntry, Photo, Today } from './types';
 
@@ -105,17 +107,22 @@ export function useAddWorkout() {
       // newest workout is last (ordered by created_at)
       const workoutId = entry.workouts[entry.workouts.length - 1].id;
       let failed = 0;
+      let firstError = '';
       for (const uri of w.photoUris) {
         try {
           await api.upload<Photo>(
             `/workouts/${workoutId}/photos`,
             buildPhotoForm(uri),
           );
-        } catch {
+        } catch (e) {
           failed += 1;
+          console.warn('photo upload failed', shortUri(uri), e);
+          if (!firstError) {
+            firstError = `${describeError(e)}\nPlik: ${shortUri(uri)}`;
+          }
         }
       }
-      return { failed };
+      return { failed, firstError };
     },
     onSuccess: invalidate,
   });

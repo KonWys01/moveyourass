@@ -17,9 +17,11 @@ import { UpdateBanner } from '@/components/UpdateGate';
 import { WorkoutCard } from '@/components/WorkoutCard';
 import {
   STATUS_LABEL,
+  describeError,
   formatDay,
   localDayString,
   pluralDays,
+  shortUri,
   weekdayName,
 } from '@/format';
 import { useTheme } from '@/theme';
@@ -60,15 +62,25 @@ export default function Today() {
     const uris = await pickPhotos(source, MAX_PHOTOS - workout.photos.length);
     setBusyWorkout(workout.id);
     let failed = 0;
+    let firstError = '';
     for (const uri of uris) {
       try {
         await upload.mutateAsync({ workoutId: workout.id, uri });
-      } catch {
+      } catch (e) {
         failed += 1;
+        console.warn('photo upload failed', shortUri(uri), e);
+        if (!firstError) {
+          firstError = `${describeError(e)}\nPlik: ${shortUri(uri)}`;
+        }
       }
     }
     setBusyWorkout(null);
-    if (failed) Alert.alert('Nie wszystkie zdjęcia się wysłały.');
+    if (failed) {
+      Alert.alert(
+        `Nie wysłano zdjęć: ${failed} z ${uris.length}`,
+        firstError,
+      );
+    }
   }
 
   function photoFooter(w: Workout) {

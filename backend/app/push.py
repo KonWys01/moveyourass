@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import time
 from typing import Protocol
 
 from app.config import get_settings
@@ -59,11 +60,37 @@ class FirebasePusher:
 
 
 _pusher: Pusher | None = None
+_last_failure_log = 0.0
+FAILURE_LOG_EVERY = 600  # seconds
 
 
 def get_pusher() -> Pusher:
-    global _pusher
-    if _pusher is None:
-        path = get_settings().firebase_credentials_file
-        _pusher = FirebasePusher(path) if path else NullPusher()
+    """Push is optional: a broken Firebase setup must never break the API.
+
+    If the credentials file is set but unusable (missing, bad json) we
+    log it (at most every 10 min) and fall back to a no-op pusher WITHOUT
+    caching the failure, so fixing the file takes effect on its own.
+    """
+    global _pusher, _last_failure_log
+    if _pusher is not None:
+        return _pusher
+    path = get_settings().firebase_credentials_file
+    if not path:
+        _pusher = NullPusher()
+        return _pusher
+    try:
+        _pusher = FirebasePusher(path)
+    except Exception:
+        now = time.monotonic()
+        if (
+            now - _last_failure_log > FAILURE_LOG_EVERY
+            or not _last_failure_log
+        ):
+            _last_failure_log = now
+            log.exception(
+                'Firebase credentials unusable (%s): push disabled until '
+                'the file is fixed',
+                path,
+            )
+        return NullPusher()
     return _pusher

@@ -33,7 +33,7 @@ export default function AddWorkout() {
   async function submit() {
     if (categoryId === null) return;
     try {
-      const { failed } = await add.mutateAsync({
+      const { failed, firstError } = await add.mutateAsync({
         categoryId,
         description,
         photoUris: photos,
@@ -41,7 +41,7 @@ export default function AddWorkout() {
       if (failed) {
         Alert.alert(
           'Trening zapisany',
-          `Nie udało się wysłać zdjęć: ${failed}. Dodasz je później z ekranu Dziś.`,
+          `Nie udało się wysłać zdjęć: ${failed}. Dodasz je później z ekranu Dziś.\n\n${firstError}`,
         );
       }
       router.back();
