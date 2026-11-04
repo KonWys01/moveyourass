@@ -23,6 +23,10 @@ class Settings(BaseSettings):
     reminder_hour: int = 20
     reminder_window_hours: int = 2
     scheduler_enabled: bool = True
+    # 'owner/repo' of the PUBLIC GitHub repo whose releases carry the APK;
+    # empty = do not auto-update the app version
+    release_repo: str = ''
+    release_check_interval_hours: float = 8
     contact_email: str = ''
 
 
