@@ -12,6 +12,13 @@ import { UpdateGate } from '@/components/UpdateGate';
 import { Text } from 'react-native';
 
 jest.mock('expo-router', () => ({}));
+const mockInstall = jest.fn();
+jest.mock('@/update', () => ({
+  ...jest.requireActual('@/update'),
+  installUpdate: (...a: unknown[]) => mockInstall(...a),
+}));
+jest.mock('expo-file-system/legacy', () => ({}));
+jest.mock('expo-intent-launcher', () => ({}));
 jest.mock('expo-application', () => ({ nativeApplicationVersion: '1.0.0' }));
 jest.mock('@/config', () => ({ API_URL: 'https://api.test' }));
 
@@ -62,6 +69,7 @@ const PREFS = {
 beforeEach(() => {
   Object.values(mockApi).forEach((f) => f.mockReset());
   mockSignOut.mockReset();
+  mockInstall.mockReset();
   mockSetUser.mockReset();
   mockApi.get.mockResolvedValue(PREFS);
 });
@@ -203,15 +211,15 @@ describe('settings update button', () => {
       update_available: true,
       update_required: false,
     });
-    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    mockInstall.mockResolvedValue(undefined);
     await wrap(<Settings />);
 
     await fireEvent.press(
-      await screen.findByText('Pobierz nową wersję 0.2.0'),
+      await screen.findByText('Zainstaluj wersję 0.2.0'),
     );
 
-    expect(open).toHaveBeenCalledWith('https://dl.example/app.apk');
-    open.mockRestore();
+    await waitFor(() => expect(mockInstall).toHaveBeenCalled());
+    expect(mockInstall.mock.calls[0][0]).toBe('https://dl.example/app.apk');
   });
 
   test('no button when up to date', async () => {
@@ -219,7 +227,7 @@ describe('settings update button', () => {
     await wrap(<Settings />);
     await screen.findByText('Polityka prywatności');
 
-    expect(screen.queryByText(/Pobierz nową wersję/)).toBeNull();
+    expect(screen.queryByText(/Zainstaluj wersję/)).toBeNull();
   });
 });
 
@@ -239,14 +247,14 @@ describe('update gate', () => {
       update_available: true,
       update_required: true,
     });
-    const open = jest.spyOn(Linking, 'openURL').mockResolvedValue(undefined);
+    mockInstall.mockResolvedValue(undefined);
     await wrap(app);
 
     expect(await screen.findByText('Wymagana aktualizacja')).toBeTruthy();
     expect(screen.queryByText('aplikacja')).toBeNull();
-    await fireEvent.press(screen.getByText('Pobierz aktualizację'));
-    expect(open).toHaveBeenCalledWith('https://dl.example/app.apk');
-    open.mockRestore();
+    await fireEvent.press(screen.getByText('Zainstaluj aktualizację'));
+    await waitFor(() => expect(mockInstall).toHaveBeenCalled());
+    expect(mockInstall.mock.calls[0][0]).toBe('https://dl.example/app.apk');
   });
 
   test('lets the app through when only an update is available', async () => {

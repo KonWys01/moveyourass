@@ -288,3 +288,36 @@ async def test_blocked_user_hidden_from_search_and_feed(pub, viewer, session):
 async def test_entries_today_route_not_shadowed(pub):
     assert (await pub.get('/entries/today')).status_code == 200
     assert (await pub.get('/entries/me')).status_code == 200
+
+
+async def test_my_history_shows_likes_and_comments_counts(pub, viewer):
+    entry = await pub.train()
+    await viewer.post(f'/entries/{entry["id"]}/like')
+    await viewer.post(
+        f'/entries/{entry["id"]}/comments', json={'text': 'super'}
+    )
+    await pub.post(f'/entries/{entry["id"]}/comments', json={'text': 'dzięki'})
+
+    rows = (await pub.get('/entries/me')).json()
+
+    assert len(rows) == 1
+    assert rows[0]['id'] == entry['id']
+    assert rows[0]['like_count'] == 1
+    assert rows[0]['comment_count'] == 2
+    assert rows[0]['liked_by_me'] is False
+    assert rows[0]['user']['id'] == pub.id
+    assert rows[0]['workouts'][0]['category']['name']
+
+
+async def test_my_history_keeps_rest_days_and_counts_zero(pub):
+    await pub.post('/entries/rest')
+
+    rows = (await pub.get('/entries/me')).json()
+
+    assert rows[0]['status'] == 'rest'
+    assert rows[0]['like_count'] == 0
+    assert rows[0]['comment_count'] == 0
+
+
+async def test_my_history_is_empty_for_a_new_user(viewer):
+    assert (await viewer.get('/entries/me')).json() == []
