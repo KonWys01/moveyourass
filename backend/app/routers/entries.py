@@ -16,11 +16,13 @@ from app.models.entry import STATUS_RANK
 from app.schemas import (
     CategoryOut,
     DayEntryOut,
+    SocialEntryOut,
     TodayOut,
     WorkoutIn,
 )
 from app.services.days import entry_date_for
 from app.services.serialize import entry_out
+from app.services.social import social_entries
 from app.services.streak import compute_streak
 from app.storage import Storage, get_storage
 
@@ -156,7 +158,8 @@ async def my_entries(
     storage: StorageDep,
     limit: int = 30,
     offset: int = 0,
-) -> list[DayEntryOut]:
+) -> list[SocialEntryOut]:
+    """Own history, with like/comment counts like everywhere else."""
     result = await session.execute(
         select(DayEntry)
         .where(DayEntry.user_id == user.id)
@@ -164,4 +167,4 @@ async def my_entries(
         .limit(min(max(limit, 1), 100))
         .offset(max(offset, 0))
     )
-    return [await entry_out(e, storage) for e in result.scalars()]
+    return await social_entries(session, user, list(result.scalars()), storage)

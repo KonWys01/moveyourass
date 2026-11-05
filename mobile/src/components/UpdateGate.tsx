@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
-import { Linking, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 
 import { useVersion } from '@/api/version';
 import { useTheme } from '@/theme';
-import { Button } from '@/ui';
+import { UpdateButton } from './UpdateButton';
 
 /** Blocks the app when the server says this version is too old. */
 export function UpdateGate({ children }: { children: ReactNode }) {
@@ -21,12 +21,7 @@ export function UpdateGate({ children }: { children: ReactNode }) {
         Ta wersja aplikacji ({v.current_version}) jest za stara. Pobierz
         wersję {v.latest_version}, żeby dalej korzystać.
       </Text>
-      {v.download_url ? (
-        <Button
-          title="Pobierz aktualizację"
-          onPress={() => void Linking.openURL(v.download_url)}
-        />
-      ) : null}
+      {v.download_url ? <UpdateButton url={v.download_url} /> : null}
     </View>
   );
 }
@@ -37,15 +32,11 @@ export function UpdateBanner() {
   if (!v?.update_available || v.update_required) return null;
   return (
     <View style={[s.banner, { backgroundColor: t.card }]}>
-      <Text style={{ color: t.text, flex: 1 }}>
+      <Text style={{ color: t.text }}>
         Dostępna nowa wersja {v.latest_version}.
       </Text>
       {v.download_url ? (
-        <Button
-          title="Pobierz"
-          variant="secondary"
-          onPress={() => void Linking.openURL(v.download_url)}
-        />
+        <UpdateButton url={v.download_url} label="Zainstaluj" />
       ) : null}
     </View>
   );
@@ -54,11 +45,5 @@ export function UpdateBanner() {
 const s = StyleSheet.create({
   root: { flex: 1, justifyContent: 'center', padding: 24, gap: 16 },
   title: { fontSize: 26, fontWeight: '800' },
-  banner: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    borderRadius: 14,
-    padding: 12,
-  },
+  banner: { gap: 8, borderRadius: 14, padding: 12 },
 });

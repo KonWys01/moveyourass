@@ -1,15 +1,20 @@
+import { File } from 'expo-file-system';
 import * as ImagePicker from 'expo-image-picker';
 
 export const MAX_PHOTOS = 5;
 
-/** Multipart body the backend expects (`file` field, JPEG). */
+/**
+ * Multipart body the backend expects (`file` field).
+ *
+ * Expo's global fetch builds the multipart body itself and accepts only
+ * strings, Blobs and objects with `bytes()`. The old React Native style
+ * `{ uri, name, type }` is rejected ("Unsupported FormDataPart
+ * implementation"), so the file is passed as an expo-file-system `File`
+ * (it carries its own name and reads its own bytes).
+ */
 export function buildPhotoForm(uri: string): FormData {
   const form = new FormData();
-  form.append('file', {
-    uri,
-    name: 'photo.jpg',
-    type: 'image/jpeg',
-  } as unknown as Blob);
+  form.append('file', new File(uri) as unknown as Blob);
   return form;
 }
 

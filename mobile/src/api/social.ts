@@ -156,7 +156,7 @@ export function useComments(entryId: string) {
 
 export function useAddComment(entryId: string) {
   const { api } = useSession();
-  const invalidate = useInvalidate('feed', 'entry', 'userEntries');
+  const invalidate = useInvalidate('feed', 'entry', 'userEntries', 'history');
   return useMutation({
     mutationFn: (text: string) =>
       api.post<Comment>(`/entries/${entryId}/comments`, { text }),
@@ -166,7 +166,7 @@ export function useAddComment(entryId: string) {
 
 export function useDeleteComment(entryId: string) {
   const { api } = useSession();
-  const invalidate = useInvalidate('feed', 'entry', 'userEntries');
+  const invalidate = useInvalidate('feed', 'entry', 'userEntries', 'history');
   return useMutation({
     mutationFn: (commentId: string) => api.del(`/comments/${commentId}`),
     onSuccess: () => invalidate(['comments', entryId]),
