@@ -19,6 +19,7 @@ import {
 import { useVersion } from '@/api/version';
 import { useSession } from '@/auth/session';
 import { fullName } from '@/components/Avatar';
+import { UpdateButton } from '@/components/UpdateButton';
 import { API_URL } from '@/config';
 import { useTheme } from '@/theme';
 import { Button } from '@/ui';
@@ -116,13 +117,12 @@ export default function Settings() {
       <Text style={{ color: t.muted }}>
         Wersja {Application.nativeApplicationVersion ?? '?'}
       </Text>
-      {version?.update_available && !version.update_required && (
-        <Button
-          title={`Pobierz nową wersję ${version.latest_version}`}
-          onPress={() => void Linking.openURL(version.download_url)}
-          disabled={!version.download_url}
+      {version?.update_available && version.download_url ? (
+        <UpdateButton
+          url={version.download_url}
+          label={`Zainstaluj wersję ${version.latest_version}`}
         />
-      )}
+      ) : null}
       <Button
         title="Polityka prywatności"
         variant="secondary"

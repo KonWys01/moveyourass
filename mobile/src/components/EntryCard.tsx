@@ -22,17 +22,23 @@ export function EntryCard({
   entry,
   stats,
   showUser = true,
+  showDate = true,
   openOnPress = true,
 }: {
   entry: SocialEntry;
   stats?: Stats;
   showUser?: boolean;
+  showDate?: boolean;
   openOnPress?: boolean;
 }) {
   const t = useTheme();
   const router = useRouter();
   const like = useToggleLike();
   const open = () => router.push(`/entry/${entry.id}`);
+  // an older backend may not send the counts yet: show 0, not "undefined"
+  const likes = entry.like_count ?? 0;
+  const comments = entry.comment_count ?? 0;
+  const liked = entry.liked_by_me ?? false;
 
   return (
     <View style={[s.card, { backgroundColor: t.card }]}>
@@ -50,9 +56,11 @@ export function EntryCard({
           </View>
         </Pressable>
       )}
-      <Text style={{ color: t.muted, textTransform: 'capitalize' }}>
-        {formatDay(entry.date)}
-      </Text>
+      {showDate && (
+        <Text style={{ color: t.muted, textTransform: 'capitalize' }}>
+          {formatDay(entry.date)}
+        </Text>
+      )}
       {entry.workouts.map((w) => (
         <Pressable key={w.id} onPress={openOnPress ? open : undefined}>
           <Text style={[s.title, { color: t.text }]}>{w.category.name}</Text>
@@ -67,19 +75,17 @@ export function EntryCard({
       <View style={s.actions}>
         <Pressable
           accessibilityRole="button"
-          accessibilityLabel={entry.liked_by_me ? 'Cofnij lajk' : 'Polub'}
-          onPress={() =>
-            like.mutate({ id: entry.id, liked: entry.liked_by_me })
-          }
+          accessibilityLabel={liked ? 'Cofnij lajk' : 'Polub'}
+          onPress={() => like.mutate({ id: entry.id, liked })}
           disabled={like.isPending}
         >
           <Text
             style={{
-              color: entry.liked_by_me ? t.danger : t.muted,
+              color: liked ? t.danger : t.muted,
               fontSize: 16,
             }}
           >
-            {entry.liked_by_me ? '♥' : '♡'} {entry.like_count}
+            {liked ? '♥' : '♡'} {likes}
           </Text>
         </Pressable>
         <Pressable
@@ -88,7 +94,7 @@ export function EntryCard({
           onPress={open}
         >
           <Text style={{ color: t.muted, fontSize: 16 }}>
-            💬 {entry.comment_count}
+            💬 {comments}
           </Text>
         </Pressable>
       </View>
