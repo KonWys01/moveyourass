@@ -1,14 +1,23 @@
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import {
+  ActivityIndicator,
+  FlatList,
+  Pressable,
+  StyleSheet,
+  Text,
+  View,
+} from 'react-native';
 
-import { useHistory } from '@/api/queries';
+import { useDeleteEntry, useHistory } from '@/api/queries';
 import type { SocialEntry } from '@/api/types';
 import { EntryCard } from '@/components/EntryCard';
+import { confirmDelete } from '@/confirm';
 import { STATUS_LABEL, formatDay } from '@/format';
 import { useTheme } from '@/theme';
 import { Button } from '@/ui';
 
 function Day({ entry }: { entry: SocialEntry }) {
   const t = useTheme();
+  const del = useDeleteEntry();
   return (
     <View style={s.day}>
       <Text style={[s.date, { color: t.text }]}>{formatDay(entry.date)}</Text>
@@ -16,7 +25,23 @@ function Day({ entry }: { entry: SocialEntry }) {
         // same card as on the feed: likes, comments, tap opens the entry
         <EntryCard entry={entry} showUser={false} showDate={false} />
       ) : (
-        <Text style={{ color: t.muted }}>{STATUS_LABEL[entry.status]}</Text>
+        <View style={s.statusRow}>
+          <Text style={{ color: t.muted }}>{STATUS_LABEL[entry.status]}</Text>
+          <Pressable
+            accessibilityRole="button"
+            accessibilityLabel="Usuń dzień"
+            disabled={del.isPending}
+            onPress={() =>
+              confirmDelete(
+                `Usunąć wpis „${STATUS_LABEL[entry.status]}”?`,
+                () => del.mutate(entry.id),
+              )
+            }
+            hitSlop={8}
+          >
+            <Text style={{ color: t.danger, fontWeight: '600' }}>Usuń</Text>
+          </Pressable>
+        </View>
       )}
     </View>
   );
@@ -63,5 +88,10 @@ const s = StyleSheet.create({
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 16, gap: 16 },
   day: { gap: 8 },
+  statusRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   date: { fontSize: 16, fontWeight: '700', textTransform: 'capitalize' },
 });

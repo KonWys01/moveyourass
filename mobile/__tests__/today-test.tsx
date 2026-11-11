@@ -21,7 +21,12 @@ jest.mock('@/api/photos', () => ({
   pickPhotos: (...args: unknown[]) => mockPick(...args),
 }));
 
-const mockApi = { get: jest.fn(), post: jest.fn(), upload: jest.fn() };
+const mockApi = {
+  get: jest.fn(),
+  post: jest.fn(),
+  upload: jest.fn(),
+  del: jest.fn(),
+};
 jest.mock('@/auth/session', () => ({
   useSession: () => ({ api: mockApi }),
 }));
@@ -190,4 +195,61 @@ test('a failed photo upload says why and for which file', async () => {
   expect(warn).toHaveBeenCalled(); // also goes to logcat for adb
   alert.mockRestore();
   warn.mockRestore();
+});
+
+const withWorkout = {
+  ...base,
+  entry: {
+    id: 'e1',
+    date: base.date,
+    created_at: '2026-01-05T10:00:00+00:00',
+    status: 'workout',
+    workouts: [
+      {
+        id: 'w1',
+        category: { id: 1, name: 'Bieganie' },
+        description: null,
+        photos: [{ id: 'p1', url: 'https://img/1.jpg' }],
+      },
+    ],
+  },
+};
+
+function pressConfirm() {
+  const buttons = (Alert.alert as jest.Mock).mock.calls.at(-1)[2];
+  buttons.find((b: { text: string }) => b.text === 'Usuń').onPress();
+}
+
+test('a photo has a visible ✕ that deletes it after confirming', async () => {
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  mockApi.del.mockReset().mockResolvedValue(undefined);
+  serve(withWorkout);
+  await renderToday();
+
+  await fireEvent.press(await screen.findByLabelText('Usuń zdjęcie'));
+  expect(mockApi.del).not.toHaveBeenCalled();
+  pressConfirm();
+  await waitFor(() => expect(mockApi.del).toHaveBeenCalledWith('/photos/p1'));
+});
+
+test('Edit opens the edit screen of that workout', async () => {
+  serve(withWorkout);
+  await renderToday();
+
+  await fireEvent.press(await screen.findByLabelText('Edytuj trening'));
+  expect(mockPush).toHaveBeenCalledWith('/edit-workout/w1?entry=e1');
+});
+
+test('a rest day marked by mistake can be deleted', async () => {
+  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  mockApi.del.mockReset().mockResolvedValue(undefined);
+  serve({
+    ...base,
+    entry: { ...withWorkout.entry, status: 'rest', workouts: [] },
+  });
+  await renderToday();
+
+  await fireEvent.press(await screen.findByLabelText('Usuń wpis dnia'));
+  pressConfirm();
+  await waitFor(() => expect(mockApi.del).toHaveBeenCalledWith('/entries/e1'));
 });

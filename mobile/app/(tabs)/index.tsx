@@ -3,6 +3,7 @@ import { useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Pressable,
   RefreshControl,
   ScrollView,
   StyleSheet,
@@ -10,9 +11,15 @@ import {
   View,
 } from 'react-native';
 
-import { useMarkDay, useToday, useUploadPhoto } from '@/api/queries';
+import {
+  useDeleteEntry,
+  useMarkDay,
+  useToday,
+  useUploadPhoto,
+} from '@/api/queries';
 import { MAX_PHOTOS, pickPhotos } from '@/api/photos';
 import type { Workout } from '@/api/types';
+import { confirmDelete } from '@/confirm';
 import { UpdateBanner } from '@/components/UpdateGate';
 import { WorkoutCard } from '@/components/WorkoutCard';
 import {
@@ -33,6 +40,7 @@ export default function Today() {
   const today = useToday();
   const mark = useMarkDay();
   const upload = useUploadPhoto();
+  const delEntry = useDeleteEntry();
   const [busyWorkout, setBusyWorkout] = useState<string | null>(null);
 
   if (today.isLoading) {
@@ -150,11 +158,35 @@ export default function Today() {
           <Text style={{ color: t.text }}>
             Dziś: {STATUS_LABEL[status]}
           </Text>
+          {d.entry && (
+            <Pressable
+              accessibilityRole="button"
+              accessibilityLabel="Usuń wpis dnia"
+              disabled={delEntry.isPending}
+              onPress={() =>
+                confirmDelete(
+                  `Usunąć wpis „${STATUS_LABEL[status]}”?`,
+                  () => delEntry.mutate(d.entry!.id),
+                )
+              }
+              hitSlop={8}
+            >
+              <Text style={{ color: t.danger, fontWeight: '600' }}>
+                Usuń
+              </Text>
+            </Pressable>
+          )}
         </View>
       )}
 
       {d.entry?.workouts.map((w) => (
-        <WorkoutCard key={w.id} workout={w} editable footer={photoFooter(w)} />
+        <WorkoutCard
+          key={w.id}
+          workout={w}
+          entryId={d.entry!.id}
+          editable
+          footer={photoFooter(w)}
+        />
       ))}
 
       <Button

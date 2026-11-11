@@ -65,11 +65,12 @@ export function useUserEntries(id: string, enabled: boolean) {
   });
 }
 
-export function useEntry(id: string) {
+export function useEntry(id: string, enabled = true) {
   const { api } = useSession();
   return useQuery({
     queryKey: ['entry', id],
     queryFn: () => api.get<SocialEntry>(`/entries/${id}`),
+    enabled,
   });
 }
 

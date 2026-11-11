@@ -2,12 +2,13 @@ import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { useToggleLike } from '@/api/social';
+import { useSession } from '@/auth/session';
 import type { SocialEntry, Stats } from '@/api/types';
 import { formatDay } from '@/format';
 import { useTheme } from '@/theme';
 
 import { Avatar, fullName } from './Avatar';
-import { PhotoStrip } from './WorkoutCard';
+import { EditWorkoutButton, PhotoStrip } from './WorkoutCard';
 
 export function StatsLine({ stats }: { stats: Stats }) {
   const t = useTheme();
@@ -34,6 +35,9 @@ export function EntryCard({
   const t = useTheme();
   const router = useRouter();
   const like = useToggleLike();
+  const { user: me } = useSession();
+  // edit only your own workouts (the feed and profiles show others too)
+  const mine = me?.id === entry.user.id;
   const open = () => router.push(`/entry/${entry.id}`);
   // an older backend may not send the counts yet: show 0, not "undefined"
   const likes = entry.like_count ?? 0;
@@ -63,7 +67,12 @@ export function EntryCard({
       )}
       {entry.workouts.map((w) => (
         <Pressable key={w.id} onPress={openOnPress ? open : undefined}>
-          <Text style={[s.title, { color: t.text }]}>{w.category.name}</Text>
+          <View style={s.titleRow}>
+            <Text style={[s.title, { color: t.text }]}>
+              {w.category.name}
+            </Text>
+            {mine && <EditWorkoutButton workoutId={w.id} entryId={entry.id} />}
+          </View>
           {w.description ? (
             <Text style={{ color: t.muted }}>{w.description}</Text>
           ) : null}
@@ -106,6 +115,11 @@ const s = StyleSheet.create({
   card: { borderRadius: 14, padding: 14, gap: 8 },
   header: { flexDirection: 'row', alignItems: 'center', gap: 10 },
   name: { fontSize: 16, fontWeight: '700' },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: { fontSize: 17, fontWeight: '700' },
   actions: { flexDirection: 'row', gap: 24, marginTop: 4 },
 });

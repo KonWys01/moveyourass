@@ -10,7 +10,14 @@ import { useSession } from '@/auth/session';
 import { describeError, shortUri } from '@/format';
 
 import { buildPhotoForm } from './photos';
-import type { Category, DayEntry, Photo, SocialEntry, Today } from './types';
+import type {
+  Category,
+  DayEntry,
+  Photo,
+  SocialEntry,
+  Today,
+  Workout,
+} from './types';
 
 export function useToday() {
   const { api } = useSession();
@@ -52,6 +59,10 @@ export function useInvalidateEntries() {
     Promise.all([
       qc.invalidateQueries({ queryKey: ['today'] }),
       qc.invalidateQueries({ queryKey: ['history'] }),
+      // the same entry can be on the feed, a profile or its own screen
+      qc.invalidateQueries({ queryKey: ['feed'] }),
+      qc.invalidateQueries({ queryKey: ['entry'] }),
+      qc.invalidateQueries({ queryKey: ['userEntries'] }),
     ]);
 }
 
@@ -81,6 +92,51 @@ export function useDeletePhoto() {
   return useMutation({
     mutationFn: (photoId: string) => api.del(`/photos/${photoId}`),
     onSuccess: invalidate,
+  });
+}
+
+export function useUpdateWorkout() {
+  const { api } = useSession();
+  const invalidate = useInvalidateEntries();
+  return useMutation({
+    mutationFn: ({
+      id,
+      categoryId,
+      description,
+    }: {
+      id: string;
+      categoryId: number;
+      description: string;
+    }) =>
+      api.patch<Workout>(`/workouts/${id}`, {
+        category_id: categoryId,
+        description: description.trim() || null,
+      }),
+    onSuccess: invalidate,
+  });
+}
+
+// Deleting does not wait for the refetch: the screen that triggered it
+// is about to close, and the removed item must not flash an error.
+export function useDeleteWorkout() {
+  const { api } = useSession();
+  const invalidate = useInvalidateEntries();
+  return useMutation({
+    mutationFn: (workoutId: string) => api.del(`/workouts/${workoutId}`),
+    onSuccess: () => {
+      void invalidate();
+    },
+  });
+}
+
+export function useDeleteEntry() {
+  const { api } = useSession();
+  const invalidate = useInvalidateEntries();
+  return useMutation({
+    mutationFn: (entryId: string) => api.del(`/entries/${entryId}`),
+    onSuccess: () => {
+      void invalidate();
+    },
   });
 }
 

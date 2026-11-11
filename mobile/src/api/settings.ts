@@ -10,7 +10,8 @@ export type NotifKind =
   | 'comment'
   | 'follow_request'
   | 'new_follower'
-  | 'request_accepted';
+  | 'request_accepted'
+  | 'new_activity';
 
 export type NotifPrefs = Record<NotifKind, boolean>;
 
@@ -21,6 +22,7 @@ export const NOTIF_LABELS: [NotifKind, string][] = [
   ['follow_request', 'Prośba o obserwowanie'],
   ['new_follower', 'Ktoś zaczął mnie obserwować'],
   ['request_accepted', 'Moja prośba została zaakceptowana'],
+  ['new_activity', 'Obserwowana osoba dodała trening'],
 ];
 
 export function useNotifPrefs() {
