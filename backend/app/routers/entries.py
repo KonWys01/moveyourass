@@ -14,10 +14,12 @@ from app.db import get_session
 from app.deps import current_user
 from app.models import (
     Category,
+    Comment,
     DayEntry,
     EntryStatus,
     Follow,
     FollowStatus,
+    Like,
     User,
     Workout,
 )
@@ -188,6 +190,18 @@ async def today(
     workout_days = [e.date for e in entries if e.status == 'workout']
     since = (day - max(workout_days)).days if workout_days else None
     hint_after = get_settings().rest_hint_days
+    likes = comments = 0
+    if todays is not None:
+        likes = await session.scalar(
+            select(func.count())
+            .select_from(Like)
+            .where(Like.entry_id == todays.id)
+        )
+        comments = await session.scalar(
+            select(func.count())
+            .select_from(Comment)
+            .where(Comment.entry_id == todays.id)
+        )
     return TodayOut(
         date=day,
         entry=(
@@ -199,6 +213,8 @@ async def today(
         days_since_workout=since,
         show_rest_hint=(since is None or since >= hint_after)
         and statuses.get(day) is None,
+        like_count=likes or 0,
+        comment_count=comments or 0,
     )
 
 
