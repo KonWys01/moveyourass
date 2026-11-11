@@ -63,6 +63,11 @@ class WorkoutIn(BaseModel):
     description: str | None = Field(default=None, max_length=500)
 
 
+class WorkoutPatch(BaseModel):
+    category_id: int | None = None
+    description: str | None = Field(default=None, max_length=500)
+
+
 class PhotoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 

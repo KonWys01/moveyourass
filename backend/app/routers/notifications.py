@@ -27,6 +27,7 @@ class PrefsOut(BaseModel):
     follow_request: bool = True
     new_follower: bool = True
     request_accepted: bool = True
+    new_activity: bool = True
 
 
 class PrefsPatch(BaseModel):
@@ -36,6 +37,7 @@ class PrefsPatch(BaseModel):
     follow_request: bool | None = None
     new_follower: bool | None = None
     request_accepted: bool | None = None
+    new_activity: bool | None = None
 
 
 @router.post('/devices', status_code=204)
