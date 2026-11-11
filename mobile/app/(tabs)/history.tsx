@@ -1,19 +1,20 @@
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { useHistory } from '@/api/queries';
-import type { DayEntry } from '@/api/types';
-import { WorkoutCard } from '@/components/WorkoutCard';
+import type { SocialEntry } from '@/api/types';
+import { EntryCard } from '@/components/EntryCard';
 import { STATUS_LABEL, formatDay } from '@/format';
 import { useTheme } from '@/theme';
 import { Button } from '@/ui';
 
-function Day({ entry }: { entry: DayEntry }) {
+function Day({ entry }: { entry: SocialEntry }) {
   const t = useTheme();
   return (
     <View style={s.day}>
       <Text style={[s.date, { color: t.text }]}>{formatDay(entry.date)}</Text>
       {entry.status === 'workout' ? (
-        entry.workouts.map((w) => <WorkoutCard key={w.id} workout={w} />)
+        // same card as on the feed: likes, comments, tap opens the entry
+        <EntryCard entry={entry} showUser={false} showDate={false} />
       ) : (
         <Text style={{ color: t.muted }}>{STATUS_LABEL[entry.status]}</Text>
       )}

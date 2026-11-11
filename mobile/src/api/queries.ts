@@ -10,7 +10,7 @@ import { useSession } from '@/auth/session';
 import { describeError, shortUri } from '@/format';
 
 import { buildPhotoForm } from './photos';
-import type { Category, DayEntry, Photo, Today } from './types';
+import type { Category, DayEntry, Photo, SocialEntry, Today } from './types';
 
 export function useToday() {
   const { api } = useSession();
@@ -37,7 +37,7 @@ export function useHistory() {
     queryKey: ['history'],
     initialPageParam: 0,
     queryFn: ({ pageParam }) =>
-      api.get<DayEntry[]>('/entries/me', {
+      api.get<SocialEntry[]>('/entries/me', {
         limit: PAGE,
         offset: pageParam,
       }),
