@@ -48,6 +48,14 @@ function Routes() {
               presentation: 'modal',
             }}
           />
+          <Stack.Screen
+            name="edit-workout/[id]"
+            options={{
+              headerShown: true,
+              title: 'Edytuj trening',
+              presentation: 'modal',
+            }}
+          />
         </Stack.Protected>
       </Stack>
     </UpdateGate>

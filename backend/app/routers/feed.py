@@ -137,6 +137,20 @@ async def like(
         )
 
 
+@router.get('/entries/{entry_id}/likes')
+async def list_likes(
+    entry_id: uuid.UUID, session: Session, me: CurrentUser
+) -> list[UserBrief]:
+    entry = await _viewable_entry(session, me, entry_id)
+    result = await session.execute(
+        select(User)
+        .join(Like, Like.user_id == User.id)
+        .where(Like.entry_id == entry.id)
+        .order_by(Like.created_at)
+    )
+    return [UserBrief.model_validate(u) for u in result.scalars()]
+
+
 @router.delete('/entries/{entry_id}/like', status_code=204)
 async def unlike(
     entry_id: uuid.UUID, session: Session, me: CurrentUser

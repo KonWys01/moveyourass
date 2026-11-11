@@ -18,6 +18,7 @@ import {
   useComments,
   useDeleteComment,
   useEntry,
+  useLikes,
 } from '@/api/social';
 import { useSession } from '@/auth/session';
 import { fullName } from '@/components/Avatar';
@@ -33,6 +34,10 @@ export default function EntryScreen() {
   const comments = useComments(id);
   const add = useAddComment(id);
   const del = useDeleteComment(id);
+  const likes = useLikes(
+    id,
+    !!entry.data && me?.id === entry.data.user.id && entry.data.like_count > 0,
+  );
   const [text, setText] = useState('');
 
   if (entry.isLoading) {
@@ -69,6 +74,14 @@ export default function EntryScreen() {
     >
       <ScrollView contentContainerStyle={s.content}>
         <EntryCard entry={e} openOnPress={false} />
+        {likes.data && likes.data.length > 0 && (
+          <Text style={{ color: t.muted }}>
+            Polubili:{' '}
+            {likes.data
+              .map((u) => `${u.first_name} ${u.last_name.charAt(0)}.`)
+              .join(', ')}
+          </Text>
+        )}
         <Text style={[s.heading, { color: t.text }]}>Komentarze</Text>
         {comments.data?.map((c) => {
           const canDelete = me?.id === c.user.id || me?.id === e.user.id;

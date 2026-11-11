@@ -65,11 +65,12 @@ export function useUserEntries(id: string, enabled: boolean) {
   });
 }
 
-export function useEntry(id: string) {
+export function useEntry(id: string, enabled = true) {
   const { api } = useSession();
   return useQuery({
     queryKey: ['entry', id],
     queryFn: () => api.get<SocialEntry>(`/entries/${id}`),
+    enabled,
   });
 }
 
@@ -136,6 +137,8 @@ export function useToggleLike() {
     'entry',
     'userEntries',
     'history',
+    'today',
+    'likes',
   );
   return useMutation({
     mutationFn: ({ id, liked }: { id: string; liked: boolean }) =>
@@ -143,6 +146,15 @@ export function useToggleLike() {
         ? api.del(`/entries/${id}/like`)
         : api.post(`/entries/${id}/like`),
     onSuccess: () => invalidate(),
+  });
+}
+
+export function useLikes(entryId: string, enabled: boolean) {
+  const { api } = useSession();
+  return useQuery({
+    queryKey: ['likes', entryId],
+    queryFn: () => api.get<UserBrief[]>(`/entries/${entryId}/likes`),
+    enabled,
   });
 }
 
@@ -156,7 +168,13 @@ export function useComments(entryId: string) {
 
 export function useAddComment(entryId: string) {
   const { api } = useSession();
-  const invalidate = useInvalidate('feed', 'entry', 'userEntries', 'history');
+  const invalidate = useInvalidate(
+    'feed',
+    'entry',
+    'userEntries',
+    'history',
+    'today',
+  );
   return useMutation({
     mutationFn: (text: string) =>
       api.post<Comment>(`/entries/${entryId}/comments`, { text }),
@@ -166,7 +184,13 @@ export function useAddComment(entryId: string) {
 
 export function useDeleteComment(entryId: string) {
   const { api } = useSession();
-  const invalidate = useInvalidate('feed', 'entry', 'userEntries', 'history');
+  const invalidate = useInvalidate(
+    'feed',
+    'entry',
+    'userEntries',
+    'history',
+    'today',
+  );
   return useMutation({
     mutationFn: (commentId: string) => api.del(`/comments/${commentId}`),
     onSuccess: () => invalidate(['comments', entryId]),

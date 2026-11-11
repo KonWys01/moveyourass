@@ -1,9 +1,10 @@
+import logging
 import uuid
 from datetime import date
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select
+from sqlalchemy import func, select
 from sqlalchemy.dialects.postgresql import insert as pg_insert
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -11,26 +12,42 @@ from app import clock
 from app.config import get_settings
 from app.db import get_session
 from app.deps import current_user
-from app.models import Category, DayEntry, EntryStatus, User, Workout
+from app.models import (
+    Category,
+    Comment,
+    DayEntry,
+    EntryStatus,
+    Follow,
+    FollowStatus,
+    Like,
+    User,
+    Workout,
+)
 from app.models.entry import STATUS_RANK
+from app.push import Pusher, get_pusher
 from app.schemas import (
     CategoryOut,
     DayEntryOut,
     SocialEntryOut,
     TodayOut,
     WorkoutIn,
+    WorkoutOut,
+    WorkoutPatch,
 )
 from app.services.days import entry_date_for
-from app.services.serialize import entry_out
+from app.services.notify import notify
+from app.services.serialize import entry_out, workout_out
 from app.services.social import social_entries
 from app.services.streak import compute_streak
 from app.storage import Storage, get_storage
 
+log = logging.getLogger(__name__)
 router = APIRouter(tags=['entries'])
 
 Session = Annotated[AsyncSession, Depends(get_session)]
 CurrentUser = Annotated[User, Depends(current_user)]
 StorageDep = Annotated[Storage, Depends(get_storage)]
+PusherDep = Annotated[Pusher, Depends(get_pusher)]
 
 
 def _today(user: User) -> date:
@@ -78,6 +95,7 @@ async def add_workout(
     session: Session,
     user: CurrentUser,
     storage: StorageDep,
+    pusher: PusherDep,
 ) -> DayEntryOut:
     category = await session.get(Category, body.category_id)
     if category is None or not category.is_active:
@@ -85,6 +103,7 @@ async def add_workout(
     entry = await _get_or_create_entry(
         session, user, _today(user), EntryStatus.workout
     )
+    first_of_day = not entry.workouts
     session.add(
         Workout(
             entry_id=entry.id,
@@ -94,7 +113,41 @@ async def add_workout(
     )
     await session.commit()
     await session.refresh(entry, ['workouts'])
+    if first_of_day:
+        await _notify_followers(session, pusher, user, entry, category)
     return await entry_out(entry, storage)
+
+
+async def _notify_followers(
+    session: AsyncSession,
+    pusher: Pusher,
+    user: User,
+    entry: DayEntry,
+    category: Category,
+) -> None:
+    """One push per day per follower: the first workout of the day.
+    Only accepted followers (a pending request must not see activity)."""
+    ids = list(
+        (
+            await session.execute(
+                select(Follow.follower_id).where(
+                    Follow.followee_id == user.id,
+                    Follow.status == FollowStatus.accepted,
+                )
+            )
+        ).scalars()
+    )
+    for follower_id in ids:
+        await notify(
+            session,
+            pusher,
+            follower_id,
+            'new_activity',
+            'Nowy trening',
+            f'{user.first_name} {user.last_name} dodał(a) trening: '
+            f'{category.name}',
+            {'entry_id': str(entry.id), 'user_id': str(user.id)},
+        )
 
 
 async def _mark(
@@ -137,6 +190,18 @@ async def today(
     workout_days = [e.date for e in entries if e.status == 'workout']
     since = (day - max(workout_days)).days if workout_days else None
     hint_after = get_settings().rest_hint_days
+    likes = comments = 0
+    if todays is not None:
+        likes = await session.scalar(
+            select(func.count())
+            .select_from(Like)
+            .where(Like.entry_id == todays.id)
+        )
+        comments = await session.scalar(
+            select(func.count())
+            .select_from(Comment)
+            .where(Comment.entry_id == todays.id)
+        )
     return TodayOut(
         date=day,
         entry=(
@@ -148,6 +213,8 @@ async def today(
         days_since_workout=since,
         show_rest_hint=(since is None or since >= hint_after)
         and statuses.get(day) is None,
+        like_count=likes or 0,
+        comment_count=comments or 0,
     )
 
 
@@ -168,3 +235,90 @@ async def my_entries(
         .offset(max(offset, 0))
     )
     return await social_entries(session, user, list(result.scalars()), storage)
+
+
+async def _own_workout(
+    session: AsyncSession, user: User, workout_id: uuid.UUID
+) -> Workout:
+    result = await session.execute(
+        select(Workout)
+        .join(DayEntry, DayEntry.id == Workout.entry_id)
+        .where(Workout.id == workout_id, DayEntry.user_id == user.id)
+        .with_for_update(of=Workout)
+        .execution_options(populate_existing=True)
+    )
+    workout = result.scalar_one_or_none()
+    if workout is None:
+        raise HTTPException(404, 'Workout not found')
+    return workout
+
+
+async def _remove_files(storage: Storage, paths: list[str]) -> None:
+    """Best effort, after the DB commit: an orphan file is harmless, a
+    failed request after the rows are gone would not be."""
+    for path in paths:
+        try:
+            await storage.delete(path)
+        except Exception:
+            log.exception('could not delete %s from storage', path)
+
+
+@router.patch('/workouts/{workout_id}')
+async def edit_workout(
+    workout_id: uuid.UUID,
+    body: WorkoutPatch,
+    session: Session,
+    user: CurrentUser,
+    storage: StorageDep,
+) -> WorkoutOut:
+    workout = await _own_workout(session, user, workout_id)
+    fields = body.model_fields_set
+    if 'category_id' in fields and body.category_id is not None:
+        category = await session.get(Category, body.category_id)
+        if category is None or not category.is_active:
+            raise HTTPException(422, 'Unknown category')
+        workout.category_id = category.id
+    if 'description' in fields:
+        workout.description = body.description
+    await session.commit()
+    await session.refresh(workout, ['category', 'photos'])
+    return await workout_out(workout, storage)
+
+
+@router.delete('/workouts/{workout_id}', status_code=204)
+async def delete_workout(
+    workout_id: uuid.UUID,
+    session: Session,
+    user: CurrentUser,
+    storage: StorageDep,
+) -> None:
+    workout = await _own_workout(session, user, workout_id)
+    paths = [p.storage_path for p in workout.photos]
+    siblings = await session.scalar(
+        select(func.count())
+        .select_from(Workout)
+        .where(Workout.entry_id == workout.entry_id)
+    )
+    if siblings <= 1:
+        # last workout of the day: the day entry itself goes too
+        await session.delete(await session.get(DayEntry, workout.entry_id))
+    else:
+        await session.delete(workout)
+    await session.commit()
+    await _remove_files(storage, paths)
+
+
+@router.delete('/entries/{entry_id}', status_code=204)
+async def delete_entry(
+    entry_id: uuid.UUID,
+    session: Session,
+    user: CurrentUser,
+    storage: StorageDep,
+) -> None:
+    entry = await session.get(DayEntry, entry_id)
+    if entry is None or entry.user_id != user.id:
+        raise HTTPException(404, 'Entry not found')
+    paths = [p.storage_path for w in entry.workouts for p in w.photos]
+    await session.delete(entry)
+    await session.commit()
+    await _remove_files(storage, paths)

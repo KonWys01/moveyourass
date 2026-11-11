@@ -63,6 +63,11 @@ class WorkoutIn(BaseModel):
     description: str | None = Field(default=None, max_length=500)
 
 
+class WorkoutPatch(BaseModel):
+    category_id: int | None = None
+    description: str | None = Field(default=None, max_length=500)
+
+
 class PhotoOut(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
@@ -97,6 +102,8 @@ class TodayOut(BaseModel):
     week_threshold: int
     days_since_workout: int | None
     show_rest_hint: bool
+    like_count: int = 0
+    comment_count: int = 0
 
 
 class UserBrief(BaseModel):
@@ -148,3 +155,54 @@ class CommentOut(BaseModel):
     user: UserBrief
     text: str
     created_at: datetime
+
+
+class MonthStats(BaseModel):
+    workouts: int
+    active_days: int
+
+
+class WeekBar(BaseModel):
+    week_start: date
+    days: int
+
+
+class CategoryCount(BaseModel):
+    name: str
+    count: int
+
+
+class BadgeOut(BaseModel):
+    id: str
+    icon: str
+    title: str
+    description: str
+    earned: bool
+    progress: int
+    target: int
+
+
+class StatsOut(BaseModel):
+    total_workouts: int
+    active_days: int
+    total_photos: int
+    this_month: MonthStats
+    current_streak: int
+    longest_streak: int
+    best_week_days: int
+    weeks: list[WeekBar]
+    categories: list[CategoryCount]
+    badges: list[BadgeOut]
+
+
+class CalendarDay(BaseModel):
+    date: date
+    status: str
+    entry_id: uuid.UUID
+    workouts: int
+    photos: int
+
+
+class CalendarOut(BaseModel):
+    month: str
+    days: list[CalendarDay]

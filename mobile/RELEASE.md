@@ -1,10 +1,18 @@
 # Wydawanie APK
 
-Wydanie robi workflow `Release APK` (`.github/workflows/release-apk.yml`):
+Wydanie robi workflow `Release APK` (`.github/workflows/release-apk.yml`)
+**automatycznie**: każdy merge do `main`, który zmienia coś w `mobile/`,
+dostaje kolejną wersję (ostatni tag `vX.Y.Z` + 1 w patchu), jest budowany,
+testowany, podpisywany i publikowany. Tagów nie trzeba wypychać ręcznie.
 
-```bash
-git tag v0.1.0 && git push origin v0.1.0
-```
+- Pominięcie wydania: dopisz `[skip release]` do commita (squash: do tytułu
+  PR-a).
+- Większy skok (np. 0.2.0): `git tag v0.2.0 && git push origin v0.2.0`
+  albo Actions → Release APK → Run workflow. Automat leci dalej od tej wersji.
+- Zmiany tylko w `backend/` nie wydają aplikacji.
+- Po wydaniu backend sam dopisuje wersję do panelu (przy starcie i co 8 h,
+  wymaga `RELEASE_REPO=KonWys01/moveyourass` w `.env`), więc ręcznie
+  zostaje tylko `./scripts/deploy.sh`.
 
 Buduje podpisany APK i tworzy GitHub Release z plikami
 `moveyourass-<wersja>.apk` oraz `moveyourass.apk` (stała nazwa).

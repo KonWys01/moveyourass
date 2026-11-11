@@ -13,6 +13,7 @@ from app.routers import (
     meta,
     notifications,
     photos,
+    stats,
     users,
 )
 from app.scheduler import release_loop, reminder_loop
@@ -41,6 +42,7 @@ async def lifespan(_: FastAPI):
 app = FastAPI(title='MoveYourAss', lifespan=lifespan)
 app.include_router(auth.router)
 app.include_router(me.router)
+app.include_router(stats.router)
 app.include_router(entries.router)
 app.include_router(photos.router)
 app.include_router(users.router)

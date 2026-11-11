@@ -1,5 +1,6 @@
+import { useRouter } from 'expo-router';
+import { useState } from 'react';
 import {
-  Alert,
   Image,
   Pressable,
   ScrollView,
@@ -10,74 +11,125 @@ import {
 
 import { useDeletePhoto } from '@/api/queries';
 import type { Workout } from '@/api/types';
+import { confirmDelete } from '@/confirm';
 import { useTheme } from '@/theme';
 
+import { PhotoViewer } from './PhotoViewer';
+
+/**
+ * Thumbnails; a tap opens the full-screen viewer. With `onDeletePhoto`
+ * every thumbnail also gets a visible ✕ (not a hidden long-press).
+ */
 export function PhotoStrip({
   workout,
-  onLongPressPhoto,
+  onDeletePhoto,
 }: {
   workout: Workout;
-  onLongPressPhoto?: (photoId: string) => void;
+  onDeletePhoto?: (photoId: string) => void;
 }) {
-  if (workout.photos.length === 0) return null;
+  const [viewing, setViewing] = useState<number | null>(null);
+  const photos = workout.photos.filter((p) => p.url);
+  if (photos.length === 0) return null;
   return (
-    <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-      <View style={s.row}>
-        {workout.photos.map((p) =>
-          p.url ? (
-            <Pressable
-              key={p.id}
-              onLongPress={
-                onLongPressPhoto ? () => onLongPressPhoto(p.id) : undefined
-              }
-            >
-              <Image
-                source={{ uri: p.url }}
-                style={s.photo}
-                accessibilityLabel="Zdjęcie z treningu"
-              />
-            </Pressable>
-          ) : null,
-        )}
-      </View>
-    </ScrollView>
+    <>
+      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
+        <View style={s.row}>
+          {photos.map((p, i) => (
+            <View key={p.id}>
+              <Pressable
+                accessibilityRole="imagebutton"
+                accessibilityLabel="Powiększ zdjęcie"
+                onPress={() => setViewing(i)}
+              >
+                <Image
+                  source={{ uri: p.url ?? undefined }}
+                  style={s.photo}
+                  accessibilityLabel="Zdjęcie z treningu"
+                />
+              </Pressable>
+              {onDeletePhoto && (
+                <Pressable
+                  accessibilityRole="button"
+                  accessibilityLabel="Usuń zdjęcie"
+                  onPress={() => onDeletePhoto(p.id)}
+                  style={s.remove}
+                  hitSlop={8}
+                >
+                  <Text style={s.removeText}>✕</Text>
+                </Pressable>
+              )}
+            </View>
+          ))}
+        </View>
+      </ScrollView>
+      {viewing !== null && (
+        <PhotoViewer
+          photos={photos}
+          startIndex={viewing}
+          onClose={() => setViewing(null)}
+        />
+      )}
+    </>
+  );
+}
+
+/** Confirmation + delete; shared by every place that lists own photos. */
+export function useConfirmDeletePhoto() {
+  const del = useDeletePhoto();
+  return (photoId: string) =>
+    confirmDelete('Usunąć zdjęcie?', () => del.mutate(photoId));
+}
+
+export function EditWorkoutButton({
+  workoutId,
+  entryId,
+}: {
+  workoutId: string;
+  entryId: string;
+}) {
+  const t = useTheme();
+  const router = useRouter();
+  return (
+    <Pressable
+      accessibilityRole="button"
+      accessibilityLabel="Edytuj trening"
+      onPress={() => router.push(`/edit-workout/${workoutId}?entry=${entryId}`)}
+      hitSlop={8}
+    >
+      <Text style={{ color: t.primary, fontWeight: '600' }}>Edytuj</Text>
+    </Pressable>
   );
 }
 
 export function WorkoutCard({
   workout,
+  entryId,
   editable,
   footer,
 }: {
   workout: Workout;
+  entryId?: string;
   editable?: boolean;
   footer?: React.ReactNode;
 }) {
   const t = useTheme();
-  const del = useDeletePhoto();
+  const confirmDeletePhoto = useConfirmDeletePhoto();
   return (
     <View style={[s.card, { backgroundColor: t.card }]}>
-      <Text style={[s.title, { color: t.text }]}>
-        {workout.category.name}
-      </Text>
+      <View style={s.titleRow}>
+        <Text style={[s.title, { color: t.text }]}>
+          {workout.category.name}
+        </Text>
+        {editable && entryId && (
+          <EditWorkoutButton workoutId={workout.id} entryId={entryId} />
+        )}
+      </View>
       {workout.description ? (
         <Text style={{ color: t.muted }}>{workout.description}</Text>
       ) : null}
       <PhotoStrip
         workout={workout}
-        onLongPressPhoto={
-          editable
-            ? (id) =>
-                Alert.alert('Usunąć zdjęcie?', undefined, [
-                  { text: 'Anuluj', style: 'cancel' },
-                  {
-                    text: 'Usuń',
-                    style: 'destructive',
-                    onPress: () => del.mutate(id),
-                  },
-                ])
-            : undefined
-        }
+        onDeletePhoto={editable ? confirmDeletePhoto : undefined}
       />
       {footer}
     </View>
@@ -86,7 +138,24 @@ export function WorkoutCard({
 
 const s = StyleSheet.create({
   card: { borderRadius: 14, padding: 14, gap: 8 },
+  titleRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   title: { fontSize: 17, fontWeight: '700' },
   row: { flexDirection: 'row', gap: 8 },
   photo: { width: 120, height: 120, borderRadius: 10 },
+  remove: {
+    position: 'absolute',
+    top: 4,
+    right: 4,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  removeText: { color: '#fff', fontSize: 14 },
 });

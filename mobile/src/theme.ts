@@ -8,6 +8,7 @@ const light = {
   primary: '#16a34a',
   onPrimary: '#ffffff',
   danger: '#dc2626',
+  warn: '#d97706',
   border: '#e5e7eb',
 };
 const dark: typeof light = {
@@ -18,6 +19,7 @@ const dark: typeof light = {
   primary: '#22c55e',
   onPrimary: '#05220f',
   danger: '#f87171',
+  warn: '#fbbf24',
   border: '#262d36',
 };
 

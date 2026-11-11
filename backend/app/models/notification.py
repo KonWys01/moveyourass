@@ -1,7 +1,7 @@
 import uuid
 from datetime import date, datetime
 
-from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, func
+from sqlalchemy import Boolean, Date, DateTime, ForeignKey, String, func, true
 from sqlalchemy.orm import Mapped, mapped_column
 
 from app.db import Base
@@ -13,6 +13,7 @@ KINDS = (
     'follow_request',
     'new_follower',
     'request_accepted',
+    'new_activity',
 )
 
 
@@ -40,6 +41,9 @@ class NotificationPrefs(Base):
     follow_request: Mapped[bool] = mapped_column(Boolean, default=True)
     new_follower: Mapped[bool] = mapped_column(Boolean, default=True)
     request_accepted: Mapped[bool] = mapped_column(Boolean, default=True)
+    new_activity: Mapped[bool] = mapped_column(
+        Boolean, default=True, server_default=true()
+    )
 
 
 class ReminderLog(Base):
