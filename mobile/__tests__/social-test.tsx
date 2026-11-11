@@ -258,3 +258,35 @@ test('stranger cannot delete comments they do not own', async () => {
   expect(alertSpy).not.toHaveBeenCalled();
   alertSpy.mockRestore();
 });
+
+test('owner sees who liked the entry', async () => {
+  mockApi.get.mockImplementation(async (path: string) => {
+    if (path === '/entries/target')
+      return entry('1', { user: brief('me'), like_count: 2 });
+    if (path === '/entries/target/likes')
+      return [
+        brief('a', { first_name: 'Ola', last_name: 'Nowak' }),
+        brief('b', { first_name: 'Bartek', last_name: 'Zając' }),
+      ];
+    return [];
+  });
+  await render(<EntryScreen />, { wrapper: wrapper() });
+
+  expect(
+    await screen.findByText('Polubili: Ola N., Bartek Z.'),
+  ).toBeTruthy();
+});
+
+test('likes are not fetched for a stranger entry or with no likes', async () => {
+  mockApi.get.mockImplementation(async (path: string) => {
+    if (path === '/entries/target')
+      return entry('1', { user: brief('someone'), like_count: 2 });
+    return [];
+  });
+  await render(<EntryScreen />, { wrapper: wrapper() });
+  await screen.findByText('Bieganie');
+
+  expect(
+    mockApi.get.mock.calls.some((c) => c[0] === '/entries/target/likes'),
+  ).toBe(false);
+});

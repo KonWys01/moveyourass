@@ -13,6 +13,8 @@ import { buildPhotoForm } from './photos';
 import type {
   Category,
   DayEntry,
+  CalendarMonth,
+  MyStats,
   Photo,
   SocialEntry,
   Today,
@@ -53,6 +55,22 @@ export function useHistory() {
   });
 }
 
+export function useCalendar(month: string) {
+  const { api } = useSession();
+  return useQuery({
+    queryKey: ['calendar', month],
+    queryFn: () => api.get<CalendarMonth>('/me/calendar', { month }),
+  });
+}
+
+export function useStats() {
+  const { api } = useSession();
+  return useQuery({
+    queryKey: ['stats'],
+    queryFn: () => api.get<MyStats>('/me/stats'),
+  });
+}
+
 export function useInvalidateEntries() {
   const qc = useQueryClient();
   return () =>
@@ -63,6 +81,8 @@ export function useInvalidateEntries() {
       qc.invalidateQueries({ queryKey: ['feed'] }),
       qc.invalidateQueries({ queryKey: ['entry'] }),
       qc.invalidateQueries({ queryKey: ['userEntries'] }),
+      qc.invalidateQueries({ queryKey: ['calendar'] }),
+      qc.invalidateQueries({ queryKey: ['stats'] }),
     ]);
 }
 

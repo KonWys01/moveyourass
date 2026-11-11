@@ -189,6 +189,22 @@ export default function Today() {
         />
       ))}
 
+      {d.entry && d.entry.workouts.length > 0 && (
+        <Pressable
+          accessibilityRole="button"
+          accessibilityLabel="Reakcje na dzisiejszy wpis"
+          onPress={() => router.push(`/entry/${d.entry!.id}`)}
+          style={s.reactions}
+        >
+          <Text style={{ color: t.muted, fontSize: 16 }}>
+            ♥ {d.like_count ?? 0}
+          </Text>
+          <Text style={{ color: t.muted, fontSize: 16 }}>
+            💬 {d.comment_count ?? 0}
+          </Text>
+        </Pressable>
+      )}
+
       <Button
         title="Dodaj trening"
         onPress={() => router.push('/add-workout')}
@@ -227,5 +243,6 @@ const s = StyleSheet.create({
   big: { fontSize: 22, fontWeight: '800' },
   day: { fontSize: 18, fontWeight: '700', textTransform: 'capitalize' },
   row: { flexDirection: 'row', gap: 8 },
+  reactions: { flexDirection: 'row', gap: 24, paddingVertical: 4 },
   flex: { flex: 1 },
 });

@@ -1,7 +1,9 @@
+import { useState } from 'react';
 import {
   ActivityIndicator,
   FlatList,
   Pressable,
+  ScrollView,
   StyleSheet,
   Text,
   View,
@@ -10,6 +12,8 @@ import {
 import { useDeleteEntry, useHistory } from '@/api/queries';
 import type { SocialEntry } from '@/api/types';
 import { EntryCard } from '@/components/EntryCard';
+import { HistoryCalendar } from '@/components/HistoryCalendar';
+import { StatsView } from '@/components/StatsView';
 import { confirmDelete } from '@/confirm';
 import { STATUS_LABEL, formatDay } from '@/format';
 import { useTheme } from '@/theme';
@@ -47,7 +51,7 @@ function Day({ entry }: { entry: SocialEntry }) {
   );
 }
 
-export default function History() {
+function HistoryList() {
   const t = useTheme();
   const q = useHistory();
   const entries = q.data?.pages.flat() ?? [];
@@ -84,7 +88,71 @@ export default function History() {
   );
 }
 
+type View_ = 'list' | 'calendar' | 'stats';
+
+const VIEWS: [View_, string][] = [
+  ['list', 'Lista'],
+  ['calendar', 'Kalendarz'],
+  ['stats', 'Statystyki'],
+];
+
+export default function History() {
+  const t = useTheme();
+  const [view, setView] = useState<View_>('list');
+  return (
+    <View style={{ flex: 1, backgroundColor: t.bg }}>
+      <View style={[s.segments, { backgroundColor: t.card }]}>
+        {VIEWS.map(([key, label]) => {
+          const active = key === view;
+          return (
+            <Pressable
+              key={key}
+              accessibilityRole="button"
+              accessibilityState={{ selected: active }}
+              onPress={() => setView(key)}
+              style={[
+                s.segment,
+                { backgroundColor: active ? t.primary : 'transparent' },
+              ]}
+            >
+              <Text
+                style={{
+                  color: active ? t.onPrimary : t.text,
+                  fontWeight: '600',
+                }}
+              >
+                {label}
+              </Text>
+            </Pressable>
+          );
+        })}
+      </View>
+      {view === 'list' ? (
+        <HistoryList />
+      ) : (
+        <ScrollView contentContainerStyle={s.content}>
+          {view === 'calendar' ? <HistoryCalendar /> : <StatsView />}
+        </ScrollView>
+      )}
+    </View>
+  );
+}
+
 const s = StyleSheet.create({
+  segments: {
+    flexDirection: 'row',
+    margin: 16,
+    marginBottom: 0,
+    padding: 4,
+    borderRadius: 12,
+    gap: 4,
+  },
+  segment: {
+    flex: 1,
+    alignItems: 'center',
+    paddingVertical: 8,
+    borderRadius: 9,
+  },
   center: { flex: 1, alignItems: 'center', justifyContent: 'center' },
   content: { padding: 16, gap: 16 },
   day: { gap: 8 },

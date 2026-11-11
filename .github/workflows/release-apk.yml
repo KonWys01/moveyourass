@@ -1,10 +1,17 @@
 name: Release APK
 
 # Builds a signed Android APK and publishes it as a GitHub Release.
-#   git tag v0.1.0 && git push origin v0.1.0
-# or run it by hand (Actions -> Release APK -> Run workflow).
+#
+# Automatic: every push to main that changes mobile/ gets the next patch
+# version (latest vX.Y.Z tag + 1), is built, tested, signed and published.
+# Put "[skip release]" in the commit message to skip it.
+# Manual: for a bigger bump push a tag (git tag v0.2.0 && git push origin
+# v0.2.0) or run it by hand (Actions -> Release APK -> Run workflow).
+# After a manual bump the automatic releases continue from that version.
 on:
   push:
+    branches: [main]
+    paths: ['mobile/**']
     tags: ['v*']
   workflow_dispatch:
     inputs:
@@ -21,6 +28,9 @@ concurrency:
 
 jobs:
   apk:
+    if: >-
+      github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
+      || !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     defaults:
@@ -31,13 +41,30 @@ jobs:
       EXPO_PUBLIC_GOOGLE_WEB_CLIENT_ID: ${{ vars.GOOGLE_WEB_CLIENT_ID }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0 # all tags: the next version is derived from them
 
       - name: Resolve version
         id: v
         env:
-          RAW: ${{ github.event.inputs.version || github.ref_name }}
+          EVENT: ${{ github.event_name }}
+          INPUT: ${{ github.event.inputs.version }}
+          REF_NAME: ${{ github.ref_name }}
         run: |
-          raw="$RAW"
+          if [ "$EVENT" = workflow_dispatch ]; then
+            raw="$INPUT"
+          elif [ "$GITHUB_REF_TYPE" = tag ]; then
+            raw="$REF_NAME"
+          else
+            # push to main: latest vX.Y.Z tag, patch + 1 (none yet: 0.1.0)
+            last="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)"
+            if [ -z "$last" ]; then
+              raw="0.1.0"
+            else
+              IFS=. read -r major minor patch <<< "${last#v}"
+              raw="$major.$minor.$((patch + 1))"
+            fi
+          fi
           version="${raw#v}"
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
             echo "::error::Version '$raw' is not X.Y.Z"; exit 1
@@ -142,4 +169,5 @@ jobs:
             "$RUNNER_TEMP/moveyourass-$VERSION.apk" \
             "$RUNNER_TEMP/moveyourass.apk" \
             --repo "$GITHUB_REPOSITORY" \
+            --target "$GITHUB_SHA" \
             --title "MoveYourAss $VERSION" --generate-notes

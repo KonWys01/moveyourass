@@ -45,6 +45,9 @@ export type Today = {
   week_threshold: number;
   days_since_workout: number | null;
   show_rest_hint: boolean;
+  // of today's entry (an older backend may not send them)
+  like_count?: number;
+  comment_count?: number;
 };
 
 export type UserBrief = {
@@ -84,4 +87,37 @@ export type Comment = {
   user: UserBrief;
   text: string;
   created_at: string;
+};
+
+export type CalendarDay = {
+  date: string; // YYYY-MM-DD
+  status: EntryStatus;
+  entry_id: string;
+  workouts: number;
+  photos: number;
+};
+
+export type CalendarMonth = { month: string; days: CalendarDay[] };
+
+export type Badge = {
+  id: string;
+  icon: string; // emoji
+  title: string;
+  description: string;
+  earned: boolean;
+  progress: number;
+  target: number;
+};
+
+export type MyStats = {
+  total_workouts: number;
+  active_days: number;
+  total_photos: number;
+  this_month: { workouts: number; active_days: number };
+  current_streak: number;
+  longest_streak: number;
+  best_week_days: number;
+  weeks: { week_start: string; days: number }[]; // 12, oldest first
+  categories: { name: string; count: number }[]; // biggest first
+  badges: Badge[];
 };

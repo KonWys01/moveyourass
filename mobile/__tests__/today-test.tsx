@@ -253,3 +253,41 @@ test('a rest day marked by mistake can be deleted', async () => {
   pressConfirm();
   await waitFor(() => expect(mockApi.del).toHaveBeenCalledWith('/entries/e1'));
 });
+
+const trained = {
+  id: 'e1',
+  date: localDayString(),
+  created_at: '2026-01-05T10:00:00+00:00',
+  status: 'workout',
+  workouts: [
+    {
+      id: 'w1',
+      category: { id: 1, name: 'Bieganie' },
+      description: null,
+      photos: [],
+    },
+  ],
+};
+
+test('shows likes and comments of today\'s entry and opens it', async () => {
+  serve({ ...base, entry: trained, like_count: 3, comment_count: 2 });
+  await renderToday();
+
+  expect(await screen.findByText('♥ 3')).toBeTruthy();
+  expect(screen.getByText('💬 2')).toBeTruthy();
+  await fireEvent.press(screen.getByLabelText('Reakcje na dzisiejszy wpis'));
+
+  expect(mockPush).toHaveBeenCalledWith('/entry/e1');
+});
+
+test('reactions row shows zeros on an older backend and is hidden without workouts', async () => {
+  serve({ ...base, entry: trained });
+  const first = await renderToday();
+  expect(await screen.findByText('♥ 0')).toBeTruthy();
+  first.unmount();
+
+  serve({ ...base, entry: { ...trained, status: 'rest', workouts: [] } });
+  await renderToday();
+  await screen.findByText(/Dziś:/);
+  expect(screen.queryByLabelText('Reakcje na dzisiejszy wpis')).toBeNull();
+});
