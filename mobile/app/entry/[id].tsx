@@ -1,10 +1,8 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
-  Platform,
   Pressable,
   ScrollView,
   StyleSheet,
@@ -23,6 +21,7 @@ import {
 import { useSession } from '@/auth/session';
 import { fullName } from '@/components/Avatar';
 import { EntryCard } from '@/components/EntryCard';
+import { useKeyboardOverlap } from '@/keyboard';
 import { useTheme } from '@/theme';
 import { Button } from '@/ui';
 
@@ -39,6 +38,15 @@ export default function EntryScreen() {
     !!entry.data && me?.id === entry.data.user.id && entry.data.like_count > 0,
   );
   const [text, setText] = useState('');
+  const rootRef = useRef<View>(null);
+  const scrollRef = useRef<ScrollView>(null);
+  const keyboard = useKeyboardOverlap(rootRef);
+
+  useEffect(() => {
+    if (keyboard > 0) {
+      requestAnimationFrame(() => scrollRef.current?.scrollToEnd());
+    }
+  }, [keyboard]);
 
   if (entry.isLoading) {
     return (
@@ -68,11 +76,19 @@ export default function EntryScreen() {
   }
 
   return (
-    <KeyboardAvoidingView
-      style={{ flex: 1, backgroundColor: t.bg }}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+    <View
+      ref={rootRef}
+      style={{ flex: 1, backgroundColor: t.bg, paddingBottom: keyboard }}
     >
-      <ScrollView contentContainerStyle={s.content}>
+      <ScrollView
+        ref={scrollRef}
+        contentContainerStyle={s.content}
+        keyboardShouldPersistTaps="handled"
+        // keep the newest comments in view while typing
+        onContentSizeChange={() => {
+          if (keyboard > 0) scrollRef.current?.scrollToEnd();
+        }}
+      >
         <EntryCard entry={e} openOnPress={false} />
         {likes.data && likes.data.length > 0 && (
           <Text style={{ color: t.muted }}>
@@ -134,7 +150,7 @@ export default function EntryScreen() {
           disabled={!text.trim()}
         />
       </View>
-    </KeyboardAvoidingView>
+    </View>
   );
 }
 

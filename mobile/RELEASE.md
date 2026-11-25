@@ -10,6 +10,9 @@ testowany, podpisywany i publikowany. Tagów nie trzeba wypychać ręcznie.
 - Większy skok (np. 0.2.0): `git tag v0.2.0 && git push origin v0.2.0`
   albo Actions → Release APK → Run workflow. Automat leci dalej od tej wersji.
 - Zmiany tylko w `backend/` nie wydają aplikacji.
+- „Co nowego” po aktualizacji: dopisz nowy wpis na górze `CHANGELOG`
+  w `src/changelog.ts` (kolejne `id`). Bez nowego wpisu okienko się nie
+  pokaże.
 - Po wydaniu backend sam dopisuje wersję do panelu (przy starcie i co 8 h,
   wymaga `RELEASE_REPO=KonWys01/moveyourass` w `.env`), więc ręcznie
   zostaje tylko `./scripts/deploy.sh`.

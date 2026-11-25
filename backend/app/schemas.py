@@ -1,3 +1,4 @@
+import datetime as dt
 import uuid
 from datetime import date, datetime
 from zoneinfo import ZoneInfo, ZoneInfoNotFoundError
@@ -61,6 +62,8 @@ class CategoryOut(BaseModel):
 class WorkoutIn(BaseModel):
     category_id: int
     description: str | None = Field(default=None, max_length=500)
+    # past day (picked in the calendar); None = today
+    date: dt.date | None = None  # dt.: the field name shadows the type
 
 
 class WorkoutPatch(BaseModel):

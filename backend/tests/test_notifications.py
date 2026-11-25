@@ -71,6 +71,35 @@ async def test_comment_notifies_with_text(owner, other, pusher):
     assert 'dobra robota' in pusher.sent[0]['body']
 
 
+async def test_comment_notifies_earlier_commenters(
+    client, monkeypatch, owner, other, pusher
+):
+    entry = await owner.train()
+    await other.post('/devices', json={'token': 'oth-token-cccccccc'})
+    await other.post(f'/entries/{entry["id"]}/comments', json={'text': 'a'})
+    third = await Person(client, monkeypatch, 'thr', 'Tomek').login()
+    pusher.sent.clear()
+
+    await third.post(f'/entries/{entry["id"]}/comments', json={'text': 'b'})
+
+    tokens = sorted(t for m in pusher.sent for t in m['tokens'])
+    assert tokens == sorted([TOKEN, 'oth-token-cccccccc'])
+    assert all(m['data']['entry_id'] == entry['id'] for m in pusher.sent)
+
+
+async def test_commenter_is_not_notified_about_own_comment(
+    owner, other, pusher
+):
+    entry = await owner.train()
+    await other.post('/devices', json={'token': 'oth-token-cccccccc'})
+    await other.post(f'/entries/{entry["id"]}/comments', json={'text': 'a'})
+    pusher.sent.clear()
+
+    await other.post(f'/entries/{entry["id"]}/comments', json={'text': 'b'})
+
+    assert [m['tokens'] for m in pusher.sent] == [[TOKEN]]
+
+
 async def test_follow_public_and_private_and_accept(
     client, monkeypatch, owner, other, pusher
 ):

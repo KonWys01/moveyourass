@@ -52,6 +52,35 @@ async def test_add_workout_creates_entry(client, headers, set_now):
     assert body['workouts'][0]['description'] == 'rano'
 
 
+async def test_add_workout_for_a_past_day(client, headers, set_now):
+    cid = await category_id(client, headers)
+
+    r = await client.post(
+        '/entries/workouts',
+        headers=headers,
+        json={'category_id': cid, 'date': '2026-01-02'},
+    )
+
+    assert r.status_code == 201
+    assert r.json()['date'] == '2026-01-02'
+    today = (await client.get('/entries/today', headers=headers)).json()
+    assert today['entry'] is None
+
+
+async def test_add_workout_in_the_future_or_too_old_is_rejected(
+    client, headers, set_now
+):
+    cid = await category_id(client, headers)
+
+    for day in ('2026-01-07', '2024-01-01'):
+        r = await client.post(
+            '/entries/workouts',
+            headers=headers,
+            json={'category_id': cid, 'date': day},
+        )
+        assert r.status_code == 422, day
+
+
 async def test_multiple_workouts_same_day_one_entry(client, headers, set_now):
     cid = await category_id(client, headers)
     for _ in range(2):

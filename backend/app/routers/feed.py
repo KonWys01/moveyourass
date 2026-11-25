@@ -209,6 +209,27 @@ async def add_comment(
             f'{me.first_name}: {comment.text[:80]}',
             {'entry_id': str(entry.id)},
         )
+    # everyone else who already commented here hears about the reply
+    others = (
+        await session.execute(
+            select(Comment.user_id)
+            .where(
+                Comment.entry_id == entry.id,
+                Comment.user_id.not_in([me.id, entry.user_id]),
+            )
+            .distinct()
+        )
+    ).scalars()
+    for user_id in list(others):
+        await notify(
+            session,
+            pusher,
+            user_id,
+            'comment',
+            'Nowa odpowiedź',
+            f'{me.first_name}: {comment.text[:80]}',
+            {'entry_id': str(entry.id)},
+        )
     return CommentOut(
         id=comment.id,
         user=UserBrief.model_validate(me),

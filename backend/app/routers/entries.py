@@ -49,6 +49,9 @@ CurrentUser = Annotated[User, Depends(current_user)]
 StorageDep = Annotated[Storage, Depends(get_storage)]
 PusherDep = Annotated[Pusher, Depends(get_pusher)]
 
+# how far back a workout may be added from the calendar
+MAX_BACKDATE_DAYS = 365
+
 
 def _today(user: User) -> date:
     return entry_date_for(
@@ -100,8 +103,14 @@ async def add_workout(
     category = await session.get(Category, body.category_id)
     if category is None or not category.is_active:
         raise HTTPException(422, 'Unknown category')
+    today = _today(user)
+    day = body.date or today
+    if day > today:
+        raise HTTPException(422, 'Date in the future')
+    if (today - day).days > MAX_BACKDATE_DAYS:
+        raise HTTPException(422, 'Date too far in the past')
     entry = await _get_or_create_entry(
-        session, user, _today(user), EntryStatus.workout
+        session, user, day, EntryStatus.workout
     )
     first_of_day = not entry.workouts
     session.add(
@@ -113,7 +122,8 @@ async def add_workout(
     )
     await session.commit()
     await session.refresh(entry, ['workouts'])
-    if first_of_day:
+    # a back-filled old day is not news for the followers
+    if first_of_day and day == today:
         await _notify_followers(session, pusher, user, entry, category)
     return await entry_out(entry, storage)
 

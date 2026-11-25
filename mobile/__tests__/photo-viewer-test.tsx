@@ -5,6 +5,10 @@ import { PhotoStrip } from '@/components/WorkoutCard';
 
 jest.mock('expo-router', () => ({ useRouter: () => ({ push: jest.fn() }) }));
 jest.mock('@/auth/session', () => ({ useSession: () => ({ api: {} }) }));
+const mockSave = jest.fn();
+jest.mock('@/savePhoto', () => ({
+  savePhoto: (...a: unknown[]) => mockSave(...a),
+}));
 
 const workout = {
   id: 'w1',
@@ -36,6 +40,27 @@ test('tapping a thumbnail opens the viewer with a counter, ✕ closes it', async
 
   await fireEvent.press(screen.getByLabelText('Zamknij'));
   expect(screen.queryByText('2/2')).toBeNull();
+});
+
+test('the viewer saves the current photo to the phone', async () => {
+  mockSave.mockResolvedValue('saved');
+  await wrap(<PhotoStrip workout={workout} />);
+  await fireEvent.press(screen.getAllByLabelText('Powiększ zdjęcie')[0]);
+
+  await fireEvent.press(screen.getByLabelText('Zapisz zdjęcie'));
+
+  expect(mockSave).toHaveBeenCalledWith('https://img/1.jpg', 'p1');
+  expect(await screen.findByText('Zapisano w telefonie')).toBeTruthy();
+});
+
+test('a failed save says why', async () => {
+  mockSave.mockRejectedValue(new Error('brak miejsca'));
+  await wrap(<PhotoStrip workout={workout} />);
+  await fireEvent.press(screen.getAllByLabelText('Powiększ zdjęcie')[0]);
+
+  await fireEvent.press(screen.getByLabelText('Zapisz zdjęcie'));
+
+  expect(await screen.findByText(/Nie udało się zapisać/)).toBeTruthy();
 });
 
 test('no ✕ on thumbnails unless deleting is allowed', async () => {
