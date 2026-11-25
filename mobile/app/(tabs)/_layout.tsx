@@ -1,6 +1,5 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
-
+import { TabIcon } from '@/components/TabIcon';
 import { TABS } from '@/tabs';
 import { useTheme } from '@/theme';
 
@@ -24,11 +23,9 @@ export default function TabsLayout() {
           name={tab.name}
           options={{
             title: tab.title,
-            // emoji: nothing to load, so no "missing icon" boxes
-            tabBarIcon: ({ focused }) => (
-              <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.55 }}>
-                {tab.icon}
-              </Text>
+            // drawn with Views: nothing to load, so no "missing icon" boxes
+            tabBarIcon: ({ color }) => (
+              <TabIcon name={tab.icon} color={color} background={t.bg} />
             ),
           }}
         />

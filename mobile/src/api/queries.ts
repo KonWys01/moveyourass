@@ -164,6 +164,8 @@ export type NewWorkout = {
   categoryId: number;
   description: string;
   photoUris: string[];
+  /** YYYY-MM-DD of a past day (from the calendar); omitted = today */
+  date?: string;
 };
 
 /**
@@ -179,6 +181,7 @@ export function useAddWorkout() {
       const entry = await api.post<DayEntry>('/entries/workouts', {
         category_id: w.categoryId,
         description: w.description.trim() || null,
+        ...(w.date ? { date: w.date } : {}),
       });
       // newest workout is last (ordered by created_at)
       const workoutId = entry.workouts[entry.workouts.length - 1].id;

@@ -155,6 +155,34 @@ describe('calendar', () => {
     expect(mockPush).not.toHaveBeenCalled();
   });
 
+  test('a rest day can be turned into a workout day', async () => {
+    await openCalendar();
+
+    await fireEvent.press(screen.getByLabelText('2: Odpoczynek'));
+
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    await buttons.find((b: any) => b.text === 'Dodaj trening').onPress();
+    expect(mockPush).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/add-workout/),
+    );
+  });
+
+  test('an empty past day offers adding a workout for that day', async () => {
+    serve([]);
+    await renderHistory();
+    await fireEvent.press(screen.getByText('Kalendarz'));
+    await fireEvent.press(await screen.findByLabelText('Poprzedni miesiąc'));
+    const prev = shiftMonth(month, -1);
+
+    await fireEvent.press(await screen.findByLabelText('15'));
+
+    const buttons = (Alert.alert as jest.Mock).mock.calls[0][2];
+    await buttons.find((b: any) => b.text === 'Dodaj trening').onPress();
+    expect(mockPush).toHaveBeenCalledWith(
+      `/add-workout?date=${dayOf(prev, 15)}`,
+    );
+  });
+
   test('can go back a month but never into the future', async () => {
     await openCalendar();
     const next = screen.getByLabelText('Następny miesiąc');

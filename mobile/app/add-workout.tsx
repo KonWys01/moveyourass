@@ -1,4 +1,4 @@
-import { useRouter } from 'expo-router';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   Alert,
@@ -13,12 +13,19 @@ import {
 
 import { MAX_PHOTOS, pickPhotos } from '@/api/photos';
 import { useAddWorkout, useCategories } from '@/api/queries';
+import { formatDay } from '@/format';
 import { useTheme } from '@/theme';
 import { Button } from '@/ui';
 
 export default function AddWorkout() {
   const t = useTheme();
   const router = useRouter();
+  // set when opened from a past day in the calendar
+  const params = useLocalSearchParams<{ date?: string }>();
+  const date =
+    typeof params.date === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(params.date)
+      ? params.date
+      : undefined;
   const categories = useCategories();
   const add = useAddWorkout();
   const [categoryId, setCategoryId] = useState<number | null>(null);
@@ -37,6 +44,7 @@ export default function AddWorkout() {
         categoryId,
         description,
         photoUris: photos,
+        date,
       });
       if (failed) {
         Alert.alert(
@@ -56,6 +64,11 @@ export default function AddWorkout() {
       contentContainerStyle={s.content}
       keyboardShouldPersistTaps="handled"
     >
+      {date && (
+        <Text style={[s.banner, { backgroundColor: t.card, color: t.text }]}>
+          Trening za dzień: {formatDay(date)}
+        </Text>
+      )}
       <Text style={[s.label, { color: t.text }]}>Rodzaj treningu</Text>
       <View style={s.chips}>
         {categories.data?.map((c) => {
@@ -146,6 +159,7 @@ export default function AddWorkout() {
 const s = StyleSheet.create({
   content: { padding: 16, gap: 12 },
   label: { fontSize: 16, fontWeight: '700' },
+  banner: { borderRadius: 12, padding: 12, fontWeight: '600' },
   chips: { flexDirection: 'row', flexWrap: 'wrap', gap: 8 },
   chip: { paddingVertical: 8, paddingHorizontal: 14, borderRadius: 20 },
   input: { borderRadius: 12, padding: 12, minHeight: 70, fontSize: 16 },

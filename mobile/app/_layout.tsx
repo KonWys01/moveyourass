@@ -6,6 +6,7 @@ import { useState } from 'react';
 import { SessionProvider, useSession } from '@/auth/session';
 import { PushBootstrap } from '@/components/PushBootstrap';
 import { UpdateGate } from '@/components/UpdateGate';
+import { WhatsNew } from '@/components/WhatsNew';
 import { useTheme } from '@/theme';
 
 function Routes() {
@@ -15,6 +16,7 @@ function Routes() {
   return (
     <UpdateGate>
       {status === 'signedIn' && !isNewUser && <PushBootstrap />}
+      {status === 'signedIn' && !isNewUser && <WhatsNew />}
       <Stack
         screenOptions={{
           headerShown: false,

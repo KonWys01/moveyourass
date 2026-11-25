@@ -2,6 +2,7 @@ import { useRouter } from 'expo-router';
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
   Pressable,
   StyleSheet,
   Text,
@@ -10,7 +11,6 @@ import {
 
 import { useCalendar, useDeleteEntry } from '@/api/queries';
 import type { CalendarDay } from '@/api/types';
-import { confirmDelete } from '@/confirm';
 import {
   STATUS_LABEL,
   WEEKDAYS_SHORT,
@@ -42,16 +42,34 @@ export function HistoryCalendar() {
 
   const colors = { workout: t.primary, rest: t.muted, sick: t.warn };
 
+  function addWorkout(date: string) {
+    router.push(
+      date === today ? '/add-workout' : `/add-workout?date=${date}`,
+    );
+  }
+
   function open(day: CalendarDay) {
     if (day.status === 'workout') {
       router.push(`/entry/${day.entry_id}`);
       return;
     }
-    confirmDelete(
-      `Usunąć wpis „${STATUS_LABEL[day.status]}”?`,
-      () => del.mutate(day.entry_id),
-      formatDay(day.date),
-    );
+    // rest/sick: delete it, or turn the day into a workout day
+    Alert.alert(`${STATUS_LABEL[day.status]}`, formatDay(day.date), [
+      { text: 'Anuluj', style: 'cancel' },
+      {
+        text: 'Usuń',
+        style: 'destructive',
+        onPress: () => del.mutate(day.entry_id),
+      },
+      { text: 'Dodaj trening', onPress: () => addWorkout(day.date) },
+    ]);
+  }
+
+  function openEmpty(date: string) {
+    Alert.alert('Dodać trening?', formatDay(date), [
+      { text: 'Anuluj', style: 'cancel' },
+      { text: 'Dodaj trening', onPress: () => addWorkout(date) },
+    ]);
   }
 
   return (
@@ -100,18 +118,21 @@ export function HistoryCalendar() {
             const date = dayOf(month, n);
             const entry = byDate.get(date);
             const isToday = date === today;
+            const isFuture = date > today;
             const bg = entry ? colors[entry.status] : 'transparent';
             return (
               <View key={j} style={s.cell}>
                 <Pressable
-                  accessibilityRole={entry ? 'button' : undefined}
+                  accessibilityRole={isFuture ? undefined : 'button'}
                   accessibilityLabel={
                     entry
                       ? `${n}: ${STATUS_LABEL[entry.status]}`
                       : `${n}`
                   }
-                  disabled={!entry}
-                  onPress={entry ? () => open(entry) : undefined}
+                  disabled={isFuture}
+                  onPress={
+                    entry ? () => open(entry) : () => openEmpty(date)
+                  }
                   style={[
                     s.day,
                     {
