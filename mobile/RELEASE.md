@@ -1,15 +1,15 @@
 # Wydawanie APK
 
 Wydanie robi workflow `Release APK` (`.github/workflows/release-apk.yml`)
-**automatycznie**: każdy merge do `main`, który zmienia coś w `mobile/`,
-dostaje kolejną wersję (ostatni tag `vX.Y.Z` + 1 w patchu), jest budowany,
-testowany, podpisywany i publikowany. Tagów nie trzeba wypychać ręcznie.
+**tylko na tag `vX.Y.Z`**: komenda `/release` bota z Telegrama wypycha
+kolejny tag (ostatni + 1 w patchu, albo `/release 0.2.0`), a workflow
+buduje, testuje, podpisuje i publikuje APK. Merge do `main` sam niczego
+nie wydaje (wcześniej wydawał i dublował się z `/release`).
 
-- Pominięcie wydania: dopisz `[skip release]` do commita (squash: do tytułu
-  PR-a).
-- Większy skok (np. 0.2.0): `git tag v0.2.0 && git push origin v0.2.0`
-  albo Actions → Release APK → Run workflow. Automat leci dalej od tej wersji.
-- Zmiany tylko w `backend/` nie wydają aplikacji.
+- Ręcznie: `git tag v0.2.0 && git push origin v0.2.0` albo Actions →
+  Release APK → Run workflow.
+- Ponowne uruchomienie tej samej wersji podmienia pliki w istniejącym
+  wydaniu zamiast kończyć się błędem.
 - „Co nowego” po aktualizacji: dopisz nowy wpis na górze `CHANGELOG`
   w `src/changelog.ts` (kolejne `id`). Bez nowego wpisu okienko się nie
   pokaże.

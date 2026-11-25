@@ -2,16 +2,12 @@ name: Release APK
 
 # Builds a signed Android APK and publishes it as a GitHub Release.
 #
-# Automatic: every push to main that changes mobile/ gets the next patch
-# version (latest vX.Y.Z tag + 1), is built, tested, signed and published.
-# Put "[skip release]" in the commit message to skip it.
-# Manual: for a bigger bump push a tag (git tag v0.2.0 && git push origin
-# v0.2.0) or run it by hand (Actions -> Release APK -> Run workflow).
-# After a manual bump the automatic releases continue from that version.
+# Runs ONLY for a pushed vX.Y.Z tag (the Telegram bot's /release pushes
+# one) or by hand (Actions -> Release APK -> Run workflow). It used to
+# also run on every push to main; together with /release that built the
+# same version twice and the second run failed on "release exists".
 on:
   push:
-    branches: [main]
-    paths: ['mobile/**']
     tags: ['v*']
   workflow_dispatch:
     inputs:
@@ -28,9 +24,6 @@ concurrency:
 
 jobs:
   apk:
-    if: >-
-      github.ref_type == 'tag' || github.event_name == 'workflow_dispatch'
-      || !contains(github.event.head_commit.message, '[skip release]')
     runs-on: ubuntu-latest
     timeout-minutes: 90
     defaults:
@@ -42,7 +35,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0 # all tags: the next version is derived from them
+          fetch-depth: 0 # full history and tags for the release notes
 
       - name: Resolve version
         id: v
@@ -53,17 +46,8 @@ jobs:
         run: |
           if [ "$EVENT" = workflow_dispatch ]; then
             raw="$INPUT"
-          elif [ "$GITHUB_REF_TYPE" = tag ]; then
-            raw="$REF_NAME"
           else
-            # push to main: latest vX.Y.Z tag, patch + 1 (none yet: 0.1.0)
-            last="$(git tag -l 'v[0-9]*.[0-9]*.[0-9]*' --sort=-v:refname | head -1)"
-            if [ -z "$last" ]; then
-              raw="0.1.0"
-            else
-              IFS=. read -r major minor patch <<< "${last#v}"
-              raw="$major.$minor.$((patch + 1))"
-            fi
+            raw="$REF_NAME"
           fi
           version="${raw#v}"
           if ! [[ "$version" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
@@ -165,9 +149,17 @@ jobs:
           cp "$apk" "$RUNNER_TEMP/moveyourass-$VERSION.apk"
           # stable name -> .../releases/latest/download/moveyourass.apk
           cp "$apk" "$RUNNER_TEMP/moveyourass.apk"
-          gh release create "$TAG" \
-            "$RUNNER_TEMP/moveyourass-$VERSION.apk" \
-            "$RUNNER_TEMP/moveyourass.apk" \
-            --repo "$GITHUB_REPOSITORY" \
-            --target "$GITHUB_SHA" \
-            --title "MoveYourAss $VERSION" --generate-notes
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            # re-run of the same version: replace the files, do not fail
+            gh release upload "$TAG" \
+              "$RUNNER_TEMP/moveyourass-$VERSION.apk" \
+              "$RUNNER_TEMP/moveyourass.apk" \
+              --repo "$GITHUB_REPOSITORY" --clobber
+          else
+            gh release create "$TAG" \
+              "$RUNNER_TEMP/moveyourass-$VERSION.apk" \
+              "$RUNNER_TEMP/moveyourass.apk" \
+              --repo "$GITHUB_REPOSITORY" \
+              --target "$GITHUB_SHA" \
+              --title "MoveYourAss $VERSION" --generate-notes
+          fi
