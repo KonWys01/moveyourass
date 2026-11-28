@@ -85,7 +85,9 @@ function renderHistory() {
 }
 
 beforeEach(() => {
-  jest.spyOn(Alert, 'alert').mockImplementation(() => {});
+  // spyOn returns the SAME spy on later calls, so clear the calls too:
+  // otherwise mock.calls[0] is an alert from an earlier test
+  jest.spyOn(Alert, 'alert').mockClear().mockImplementation(() => {});
   mockApi.get.mockReset();
   mockApi.del.mockReset();
   mockPush.mockReset();
