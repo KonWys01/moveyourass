@@ -1,5 +1,5 @@
 import { useLocalSearchParams } from 'expo-router';
-import { useEffect, useRef, useState } from 'react';
+import { type ComponentRef, useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -38,8 +38,8 @@ export default function EntryScreen() {
     !!entry.data && me?.id === entry.data.user.id && entry.data.like_count > 0,
   );
   const [text, setText] = useState('');
-  const rootRef = useRef<View>(null);
-  const scrollRef = useRef<ScrollView>(null);
+  const rootRef = useRef<ComponentRef<typeof View>>(null);
+  const scrollRef = useRef<ComponentRef<typeof ScrollView>>(null);
   const keyboard = useKeyboardOverlap(rootRef);
 
   useEffect(() => {

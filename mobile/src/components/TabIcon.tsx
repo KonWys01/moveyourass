@@ -1,4 +1,4 @@
-import { StyleSheet, View, type ViewStyle } from 'react-native';
+import { type ColorValue, StyleSheet, View, type ViewStyle } from 'react-native';
 
 /**
  * Minimal one-colour line icons for the bottom tabs, drawn with plain
@@ -15,7 +15,7 @@ function Box({ style }: { style: ViewStyle }) {
   return <View style={[s.abs, style]} />;
 }
 
-function Dumbbell({ c }: { c: string }) {
+function Dumbbell({ c }: { c: ColorValue }) {
   return (
     <>
       <Box style={{ left: 5, top: 11, width: 14, height: STROKE, backgroundColor: c }} />
@@ -27,7 +27,7 @@ function Dumbbell({ c }: { c: string }) {
   );
 }
 
-function Feed({ c }: { c: string }) {
+function Feed({ c }: { c: ColorValue }) {
   return (
     <>
       <Box
@@ -43,7 +43,7 @@ function Feed({ c }: { c: string }) {
   );
 }
 
-function Search({ c }: { c: string }) {
+function Search({ c }: { c: ColorValue }) {
   return (
     <>
       <Box
@@ -64,7 +64,7 @@ function Search({ c }: { c: string }) {
   );
 }
 
-function Calendar({ c }: { c: string }) {
+function Calendar({ c }: { c: ColorValue }) {
   return (
     <>
       <Box
@@ -81,7 +81,7 @@ function Calendar({ c }: { c: string }) {
   );
 }
 
-function Sliders({ c, bg }: { c: string; bg: string }) {
+function Sliders({ c, bg }: { c: ColorValue; bg: string }) {
   const knob = (left: number, top: number) => (
     <Box
       style={{
@@ -108,7 +108,7 @@ export function TabIcon({
   background,
 }: {
   name: TabIconName;
-  color: string;
+  color: ColorValue;
   /** fills the slider knobs so the line does not show through */
   background: string;
 }) {
