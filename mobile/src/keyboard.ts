@@ -1,4 +1,4 @@
-import { type RefObject, useEffect, useState } from 'react';
+import { type ComponentRef, type RefObject, useEffect, useState } from 'react';
 import { Keyboard, Platform, type View } from 'react-native';
 
 /**
@@ -10,7 +10,7 @@ import { Keyboard, Platform, type View } from 'react-native';
  * (padding is inside the view, so its frame and the math stay stable).
  * If the window does shrink (older setups) the overlap is simply 0.
  */
-export function useKeyboardOverlap(ref: RefObject<View | null>) {
+export function useKeyboardOverlap(ref: RefObject<ComponentRef<typeof View> | null>) {
   const [overlap, setOverlap] = useState(0);
 
   useEffect(() => {

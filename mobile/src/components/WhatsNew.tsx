@@ -70,7 +70,9 @@ export function WhatsNewModal({
       animationType="fade"
       statusBarTranslucent
       // Android back closes it only when the button would
-      onRequestClose={() => canClose && onClose()}
+      onRequestClose={() => {
+        if (canClose) onClose();
+      }}
     >
       <View style={s.backdrop}>
         <View style={[s.card, { backgroundColor: t.bg, borderColor: t.border }]}>
